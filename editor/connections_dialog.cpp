@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -398,7 +398,6 @@ ConnectDialog::ConnectDialog() {
 
 	tree = memnew(SceneTreeEditor(false));
 	tree->set_connecting_signal(true);
-	tree->set_show_enabled_subscene(true);
 	tree->get_scene_tree()->connect("item_activated", this, "_ok");
 	tree->connect("node_selected", this, "_tree_node_selected");
 	tree->set_connect_to_script_mode(true);
@@ -515,10 +514,6 @@ struct _ConnectionsDockMethodInfoSort {
 		return a.name < b.name;
 	}
 };
-
-void ConnectionsDock::_filter_changed(const String &p_text) {
-	update_tree();
-}
 
 /*
  * Post-ConnectDialog callback for creating/editing connections.
@@ -747,9 +742,8 @@ void ConnectionsDock::_open_connection_dialog(Connection cToEdit) {
 	Node *dst = static_cast<Node *>(cToEdit.target);
 
 	if (src && dst) {
-		const String &signalname = cToEdit.signal;
 		connect_dialog->set_title(TTR("Edit Connection:") + cToEdit.signal);
-		connect_dialog->popup_dialog(signalname);
+		connect_dialog->popup_centered();
 		connect_dialog->init(cToEdit, true);
 	}
 }
@@ -876,7 +870,6 @@ void ConnectionsDock::_bind_methods() {
 	ClassDB::bind_method("_rmb_pressed", &ConnectionsDock::_rmb_pressed);
 	ClassDB::bind_method("_close", &ConnectionsDock::_close);
 	ClassDB::bind_method("_connect_pressed", &ConnectionsDock::_connect_pressed);
-	ClassDB::bind_method("_filter_changed", &ConnectionsDock::_filter_changed);
 	ClassDB::bind_method("update_tree", &ConnectionsDock::update_tree);
 }
 
@@ -909,7 +902,7 @@ void ConnectionsDock::update_tree() {
 		String name;
 
 		if (!did_script) {
-			// Get script signals (including signals from any base scripts).
+
 			Ref<Script> scr = selectedNode->get_script();
 			if (scr.is_valid()) {
 				scr->get_script_signal_list(&node_signals2);
@@ -935,16 +928,15 @@ void ConnectionsDock::update_tree() {
 			icon = get_icon("Object", "EditorIcons");
 		}
 
-		TreeItem *section_item = NULL;
+		TreeItem *pitem = NULL;
 
-		// Create subsections.
 		if (node_signals2.size()) {
-			section_item = tree->create_item(root);
-			section_item->set_text(0, name);
-			section_item->set_icon(0, icon);
-			section_item->set_selectable(0, false);
-			section_item->set_editable(0, false);
-			section_item->set_custom_bg_color(0, get_color("prop_subsection", "Editor"));
+			pitem = tree->create_item(root);
+			pitem->set_text(0, name);
+			pitem->set_icon(0, icon);
+			pitem->set_selectable(0, false);
+			pitem->set_editable(0, false);
+			pitem->set_custom_bg_color(0, get_color("prop_subsection", "Editor"));
 			node_signals2.sort();
 		}
 
@@ -955,12 +947,6 @@ void ConnectionsDock::update_tree() {
 			StringName signal_name = mi.name;
 			String signaldesc = "(";
 			PoolStringArray argnames;
-
-			String filter_text = search_box->get_text();
-			if (!filter_text.is_subsequence_ofi(signal_name)) {
-				continue;
-			}
-
 			if (mi.arguments.size()) {
 				for (int i = 0; i < mi.arguments.size(); i++) {
 
@@ -980,14 +966,13 @@ void ConnectionsDock::update_tree() {
 			}
 			signaldesc += ")";
 
-			// Create the children of the subsection - the actual list of signals.
-			TreeItem *signal_item = tree->create_item(section_item);
-			signal_item->set_text(0, String(signal_name) + signaldesc);
+			TreeItem *item = tree->create_item(pitem);
+			item->set_text(0, String(signal_name) + signaldesc);
 			Dictionary sinfo;
 			sinfo["name"] = signal_name;
 			sinfo["args"] = argnames;
-			signal_item->set_metadata(0, sinfo);
-			signal_item->set_icon(0, get_icon("Signal", "EditorIcons"));
+			item->set_metadata(0, sinfo);
+			item->set_icon(0, get_icon("Signal", "EditorIcons"));
 
 			// Set tooltip with the signal's documentation.
 			{
@@ -1023,7 +1008,7 @@ void ConnectionsDock::update_tree() {
 				}
 
 				// "::" separators used in make_custom_tooltip for formatting.
-				signal_item->set_tooltip(0, String(signal_name) + "::" + signaldesc + "::" + descr);
+				item->set_tooltip(0, String(signal_name) + "::" + signaldesc + "::" + descr);
 			}
 
 			// List existing connections
@@ -1057,11 +1042,10 @@ void ConnectionsDock::update_tree() {
 					path += ")";
 				}
 
-				TreeItem *connection_item = tree->create_item(signal_item);
-				connection_item->set_text(0, path);
-				Connection cd = c;
-				connection_item->set_metadata(0, cd);
-				connection_item->set_icon(0, get_icon("Slot", "EditorIcons"));
+				TreeItem *item2 = tree->create_item(item);
+				item2->set_text(0, path);
+				item2->set_metadata(0, c);
+				item2->set_icon(0, get_icon("Slot", "EditorIcons"));
 			}
 		}
 
@@ -1082,14 +1066,6 @@ ConnectionsDock::ConnectionsDock(EditorNode *p_editor) {
 	set_name(TTR("Signals"));
 
 	VBoxContainer *vbc = this;
-
-	search_box = memnew(LineEdit);
-	search_box->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	search_box->set_placeholder(TTR("Filter signals"));
-	search_box->set_right_icon(get_icon("Search", "EditorIcons"));
-	search_box->set_clear_button_enabled(true);
-	search_box->connect("text_changed", this, "_filter_changed");
-	vbc->add_child(search_box);
 
 	tree = memnew(ConnectionsDockTree);
 	tree->set_columns(1);

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -43,9 +43,7 @@
 class GodotJavaWrapper {
 private:
 	jobject godot_instance;
-	jobject activity;
-	jclass godot_class;
-	jclass activity_class;
+	jclass cls;
 
 	jmethodID _on_video_init = 0;
 	jmethodID _restart = 0;
@@ -64,10 +62,9 @@ private:
 	jmethodID _vibrate = 0;
 	jmethodID _get_input_fallback_mapping = 0;
 	jmethodID _on_godot_main_loop_started = 0;
-	jmethodID _get_class_loader = 0;
 
 public:
-	GodotJavaWrapper(JNIEnv *p_env, jobject p_activity, jobject p_godot_instance);
+	GodotJavaWrapper(JNIEnv *p_env, jobject p_godot_instance);
 	~GodotJavaWrapper();
 
 	jobject get_activity();

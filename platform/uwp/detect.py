@@ -30,6 +30,7 @@ def get_opts():
 
 
 def get_flags():
+
     return [
         ("tools", False),
         ("xaudio2", True),
@@ -38,6 +39,7 @@ def get_flags():
 
 
 def configure(env):
+
     env.msvc = True
 
     if env["bits"] != "default":
@@ -75,9 +77,6 @@ def configure(env):
 
     env["ENV"] = os.environ
     vc_base_path = os.environ["VCTOOLSINSTALLDIR"] if "VCTOOLSINSTALLDIR" in os.environ else os.environ["VCINSTALLDIR"]
-
-    # Force to use Unicode encoding
-    env.AppendUnique(CCFLAGS=["/utf-8"])
 
     # ANGLE
     angle_root = os.getenv("ANGLE_SRC_PATH")

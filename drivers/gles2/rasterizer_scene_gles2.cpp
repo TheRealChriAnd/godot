@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -132,7 +132,7 @@ void RasterizerSceneGLES2::shadow_atlas_set_size(RID p_atlas, int p_size) {
 			//maximum compatibility, renderbuffer and RGBA shadow
 			glGenRenderbuffers(1, &shadow_atlas->depth);
 			glBindRenderbuffer(GL_RENDERBUFFER, shadow_atlas->depth);
-			glRenderbufferStorage(GL_RENDERBUFFER, storage->config.depth_buffer_internalformat, shadow_atlas->size, shadow_atlas->size);
+			glRenderbufferStorage(GL_RENDERBUFFER, storage->config.depth_internalformat, shadow_atlas->size, shadow_atlas->size);
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, shadow_atlas->depth);
 
 			glGenTextures(1, &shadow_atlas->color);
@@ -549,7 +549,7 @@ bool RasterizerSceneGLES2::reflection_probe_instance_begin_render(RID p_instance
 		glActiveTexture(GL_TEXTURE0);
 
 		glBindRenderbuffer(GL_RENDERBUFFER, rpi->depth);
-		glRenderbufferStorage(GL_RENDERBUFFER, storage->config.depth_buffer_internalformat, size, size);
+		glRenderbufferStorage(GL_RENDERBUFFER, storage->config.depth_internalformat, size, size);
 
 		if (rpi->cubemap != 0) {
 			glDeleteTextures(1, &rpi->cubemap);
@@ -2300,9 +2300,6 @@ void RasterizerSceneGLES2::_render_render_list(RenderList::Element **p_elements,
 
 			if (!unshaded && e->light_index < RenderList::MAX_LIGHTS) {
 				light = render_light_instances[e->light_index];
-				if (e->instance->baked_light && light->light_ptr->bake_mode == VS::LIGHT_BAKE_ALL) {
-					light = NULL; // Don't use this light, it is already included in the lightmap
-				}
 			}
 
 			if (light != prev_light) {
@@ -2572,9 +2569,6 @@ void RasterizerSceneGLES2::_render_render_list(RenderList::Element **p_elements,
 
 		if (rebind_lightmap && lightmap) {
 			state.scene_shader.set_uniform(SceneShaderGLES2::LIGHTMAP_ENERGY, lightmap_energy);
-			if (storage->config.use_lightmap_filter_bicubic) {
-				state.scene_shader.set_uniform(SceneShaderGLES2::LIGHTMAP_TEXTURE_SIZE, Vector2(lightmap->width, lightmap->height));
-			}
 		}
 
 		state.scene_shader.set_uniform(SceneShaderGLES2::WORLD_TRANSFORM, e->instance->transform);
@@ -2738,7 +2732,6 @@ void RasterizerSceneGLES2::_post_process(Environment *env, const CameraMatrix &p
 	if (env) {
 		use_post_process = use_post_process && (env->adjustments_enabled || env->glow_enabled || env->dof_blur_far_enabled || env->dof_blur_near_enabled);
 	}
-	use_post_process = use_post_process || storage->frame.current_rt->use_fxaa;
 
 	GLuint next_buffer;
 
@@ -2791,13 +2784,12 @@ void RasterizerSceneGLES2::_post_process(Environment *env, const CameraMatrix &p
 
 	// Order of operation
 	//1) DOF Blur (first blur, then copy to buffer applying the blur) //only on desktop
-	//2) FXAA
-	//3) Bloom (Glow) //only on desktop
-	//4) Adjustments
+	//2) Bloom (Glow) //only on desktop
+	//3) Adjustments
 
 	// DOF Blur
 
-	if (env && env->dof_blur_far_enabled) {
+	if (env->dof_blur_far_enabled) {
 
 		int vp_h = storage->frame.current_rt->height;
 		int vp_w = storage->frame.current_rt->width;
@@ -2854,7 +2846,7 @@ void RasterizerSceneGLES2::_post_process(Environment *env, const CameraMatrix &p
 		state.effect_blur_shader.set_conditional(EffectBlurShaderGLES2::USE_ORTHOGONAL_PROJECTION, false);
 	}
 
-	if (env && env->dof_blur_near_enabled) {
+	if (env->dof_blur_near_enabled) {
 
 		//convert texture to RGBA format if not already
 		if (!storage->frame.current_rt->used_dof_blur_near) {
@@ -2939,7 +2931,7 @@ void RasterizerSceneGLES2::_post_process(Environment *env, const CameraMatrix &p
 		storage->frame.current_rt->used_dof_blur_near = true;
 	}
 
-	if (env && (env->dof_blur_near_enabled || env->dof_blur_far_enabled)) {
+	if (env->dof_blur_near_enabled || env->dof_blur_far_enabled) {
 		//these needed to disable filtering, reenamble
 		glActiveTexture(GL_TEXTURE0);
 		if (storage->frame.current_rt->mip_maps[0].color) {
@@ -2960,7 +2952,7 @@ void RasterizerSceneGLES2::_post_process(Environment *env, const CameraMatrix &p
 	int max_glow_level = -1;
 	int glow_mask = 0;
 
-	if (env && env->glow_enabled) {
+	if (env->glow_enabled) {
 
 		for (int i = 0; i < VS::MAX_GLOW_LEVELS; i++) {
 			if (env->glow_levels & (1 << i)) {
@@ -2975,9 +2967,6 @@ void RasterizerSceneGLES2::_post_process(Environment *env, const CameraMatrix &p
 				}
 			}
 		}
-
-		// If max_texture_image_units is 8, our max glow level is 5, which allows 6 layers of glow
-		max_glow_level = MIN(max_glow_level, storage->config.max_texture_image_units - 3);
 
 		for (int i = 0; i < (max_glow_level + 1); i++) {
 
@@ -3051,121 +3040,110 @@ void RasterizerSceneGLES2::_post_process(Environment *env, const CameraMatrix &p
 		glBindTexture(GL_TEXTURE_2D, storage->frame.current_rt->mip_maps[0].sizes[0].color);
 	}
 
-	state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_FXAA, storage->frame.current_rt->use_fxaa);
+	state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_FILTER_BICUBIC, env->glow_bicubic_upscale);
 
-	if (env) {
+	if (max_glow_level >= 0) {
+		if (storage->frame.current_rt->mip_maps[0].color) {
+			for (int i = 0; i < (max_glow_level + 1); i++) {
 
-		state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_FILTER_BICUBIC, env->glow_bicubic_upscale);
-
-		if (max_glow_level >= 0) {
-			if (storage->frame.current_rt->mip_maps[0].color) {
-				for (int i = 0; i < (max_glow_level + 1); i++) {
-
-					if (glow_mask & (1 << i)) {
-						if (i == 0) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL1, true);
-						}
-						if (i == 1) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL2, true);
-						}
-						if (i == 2) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL3, true);
-						}
-						if (i == 3) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL4, true);
-						}
-						if (i == 4) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL5, true);
-						}
-						if (i == 5) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL6, true);
-						}
-						if (i == 6) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL7, true);
-						}
+				if (glow_mask & (1 << i)) {
+					if (i == 0) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL1, true);
 					}
-				}
-				glActiveTexture(GL_TEXTURE2);
-				glBindTexture(GL_TEXTURE_2D, storage->frame.current_rt->mip_maps[0].color);
-			} else {
-
-				state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_MULTI_TEXTURE_GLOW, true);
-				int active_glow_level = 0;
-				for (int i = 0; i < (max_glow_level + 1); i++) {
-
-					if (glow_mask & (1 << i)) {
-						active_glow_level++;
-						glActiveTexture(GL_TEXTURE1 + active_glow_level);
-						glBindTexture(GL_TEXTURE_2D, storage->frame.current_rt->mip_maps[0].sizes[i + 1].color);
-						if (active_glow_level == 1) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL1, true);
-						}
-						if (active_glow_level == 2) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL2, true);
-						}
-						if (active_glow_level == 3) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL3, true);
-						}
-						if (active_glow_level == 4) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL4, true);
-						}
-						if (active_glow_level == 5) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL5, true);
-						}
-						if (active_glow_level == 6) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL6, true);
-						}
-						if (active_glow_level == 7) {
-							state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL7, true);
-						}
+					if (i == 1) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL2, true);
+					}
+					if (i == 2) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL3, true);
+					}
+					if (i == 3) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL4, true);
+					}
+					if (i == 4) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL5, true);
+					}
+					if (i == 5) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL6, true);
+					}
+					if (i == 6) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL7, true);
 					}
 				}
 			}
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, storage->frame.current_rt->mip_maps[0].color);
+		} else {
 
-			state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_SCREEN, env->glow_blend_mode == VS::GLOW_BLEND_MODE_SCREEN);
-			state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_SOFTLIGHT, env->glow_blend_mode == VS::GLOW_BLEND_MODE_SOFTLIGHT);
-			state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_REPLACE, env->glow_blend_mode == VS::GLOW_BLEND_MODE_REPLACE);
+			state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_MULTI_TEXTURE_GLOW, true);
+			int active_glow_level = 0;
+			for (int i = 0; i < (max_glow_level + 1); i++) {
+
+				if (glow_mask & (1 << i)) {
+					active_glow_level++;
+					glActiveTexture(GL_TEXTURE0 + active_glow_level);
+					glBindTexture(GL_TEXTURE_2D, storage->frame.current_rt->mip_maps[0].sizes[i + 1].color);
+					if (active_glow_level == 1) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL1, true);
+					}
+					if (active_glow_level == 2) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL2, true);
+					}
+					if (active_glow_level == 3) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL3, true);
+					}
+					if (active_glow_level == 4) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL4, true);
+					}
+					if (active_glow_level == 5) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL5, true);
+					}
+					if (active_glow_level == 6) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL6, true);
+					}
+					if (active_glow_level == 7) {
+						state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL7, true);
+					}
+				}
+			}
 		}
+
+		state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_SCREEN, env->glow_blend_mode == VS::GLOW_BLEND_MODE_SCREEN);
+		state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_SOFTLIGHT, env->glow_blend_mode == VS::GLOW_BLEND_MODE_SOFTLIGHT);
+		state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_REPLACE, env->glow_blend_mode == VS::GLOW_BLEND_MODE_REPLACE);
 	}
 
 	//Adjustments
-	if (env && env->adjustments_enabled) {
+	if (env->adjustments_enabled) {
 
 		state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_BCS, true);
 		RasterizerStorageGLES2::Texture *tex = storage->texture_owner.getornull(env->color_correction);
 		if (tex) {
 			state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_COLOR_CORRECTION, true);
-			glActiveTexture(GL_TEXTURE1);
+			glActiveTexture(GL_TEXTURE2);
 			glBindTexture(tex->target, tex->tex_id);
 		}
 	}
 
 	state.tonemap_shader.bind();
-	if (env) {
-		if (max_glow_level >= 0) {
 
-			state.tonemap_shader.set_uniform(TonemapShaderGLES2::GLOW_INTENSITY, env->glow_intensity);
-			int ss[2] = {
-				storage->frame.current_rt->width,
-				storage->frame.current_rt->height,
-			};
-			glUniform2iv(state.tonemap_shader.get_uniform(TonemapShaderGLES2::GLOW_TEXTURE_SIZE), 1, ss);
-		}
+	if (max_glow_level >= 0) {
 
-		if (env->adjustments_enabled) {
-
-			state.tonemap_shader.set_uniform(TonemapShaderGLES2::BCS, Vector3(env->adjustments_brightness, env->adjustments_contrast, env->adjustments_saturation));
-		}
+		state.tonemap_shader.set_uniform(TonemapShaderGLES2::GLOW_INTENSITY, env->glow_intensity);
+		int ss[2] = {
+			storage->frame.current_rt->width,
+			storage->frame.current_rt->height,
+		};
+		glUniform2iv(state.tonemap_shader.get_uniform(TonemapShaderGLES2::GLOW_TEXTURE_SIZE), 1, ss);
 	}
 
-	if (storage->frame.current_rt->use_fxaa) {
-		state.tonemap_shader.set_uniform(TonemapShaderGLES2::PIXEL_SIZE, Vector2(1.0 / storage->frame.current_rt->width, 1.0 / storage->frame.current_rt->height));
+	if (env->adjustments_enabled) {
+
+		state.tonemap_shader.set_uniform(TonemapShaderGLES2::BCS, Vector3(env->adjustments_brightness, env->adjustments_contrast, env->adjustments_saturation));
 	}
 
 	storage->_copy_screen();
 
 	//turn off everything used
-	state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_FXAA, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL1, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL2, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_GLOW_LEVEL3, false);
@@ -4048,10 +4026,6 @@ void RasterizerSceneGLES2::initialize() {
 		if (status != GL_FRAMEBUFFER_COMPLETE) {
 			ERR_PRINT("Directional shadow framebuffer status invalid");
 		}
-	}
-
-	if (storage->config.use_lightmap_filter_bicubic) {
-		state.scene_shader.add_custom_define("#define USE_LIGHTMAP_FILTER_BICUBIC\n");
 	}
 
 	shadow_filter_mode = SHADOW_FILTER_NEAREST;

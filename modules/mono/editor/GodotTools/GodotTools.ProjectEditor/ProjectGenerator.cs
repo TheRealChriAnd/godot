@@ -8,8 +8,9 @@ namespace GodotTools.ProjectEditor
 {
     public static class ProjectGenerator
     {
-        public const string GodotSdkVersionToUse = "3.2.4";
-        public const string GodotSdkNameToUse = "Godot.NET.Sdk";
+        public const string GodotSdkVersionToUse = "3.2.3";
+
+        public static string GodotSdkAttrValue => $"Godot.NET.Sdk/{GodotSdkVersionToUse}";
 
         public static ProjectRootElement GenGameProject(string name)
         {
@@ -18,7 +19,7 @@ namespace GodotTools.ProjectEditor
 
             var root = ProjectRootElement.Create(NewProjectFileOptions.None);
 
-            root.Sdk = $"{GodotSdkNameToUse}/{GodotSdkVersionToUse}";
+            root.Sdk = GodotSdkAttrValue;
 
             var mainGroup = root.AddPropertyGroup();
             mainGroup.AddProperty("TargetFramework", "net472");

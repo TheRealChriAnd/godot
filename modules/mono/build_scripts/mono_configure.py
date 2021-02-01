@@ -93,7 +93,6 @@ def configure(env, env_mono):
     copy_mono_root = env["copy_mono_root"]
 
     mono_prefix = env["mono_prefix"]
-    mono_bcl = env["mono_bcl"]
 
     mono_lib_names = ["mono-2.0-sgen", "monosgen-2.0"]
 
@@ -259,8 +258,7 @@ def configure(env, env_mono):
             env_mono.Append(CPPDEFINES=["_REENTRANT"])
 
             if mono_static:
-                if not is_javascript:
-                    env.Append(LINKFLAGS=["-rdynamic"])
+                env.Append(LINKFLAGS=["-rdynamic"])
 
                 mono_lib_file = os.path.join(mono_lib_path, "lib" + mono_lib + ".a")
 
@@ -394,8 +392,9 @@ def configure(env, env_mono):
             mono_root = subprocess.check_output(["pkg-config", "mono-2", "--variable=prefix"]).decode("utf8").strip()
 
         if tools_enabled:
-            # Only supported for editor builds.
-            copy_mono_root_files(env, mono_root, mono_bcl)
+            copy_mono_root_files(env, mono_root)
+        else:
+            print("Ignoring option: 'copy_mono_root'; only available for builds with 'tools' enabled.")
 
 
 def make_template_dir(env, mono_root):
@@ -428,7 +427,7 @@ def make_template_dir(env, mono_root):
     copy_mono_shared_libs(env, mono_root, template_mono_root_dir)
 
 
-def copy_mono_root_files(env, mono_root, mono_bcl):
+def copy_mono_root_files(env, mono_root):
     from glob import glob
     from shutil import copy
     from shutil import rmtree
@@ -453,7 +452,7 @@ def copy_mono_root_files(env, mono_root, mono_bcl):
 
     # Copy framework assemblies
 
-    mono_framework_dir = mono_bcl or os.path.join(mono_root, "lib", "mono", "4.5")
+    mono_framework_dir = os.path.join(mono_root, "lib", "mono", "4.5")
     mono_framework_facades_dir = os.path.join(mono_framework_dir, "Facades")
 
     editor_mono_framework_dir = os.path.join(editor_mono_root_dir, "lib", "mono", "4.5")

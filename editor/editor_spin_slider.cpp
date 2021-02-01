@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -376,12 +376,7 @@ String EditorSpinSlider::get_label() const {
 }
 
 void EditorSpinSlider::_evaluate_input_text() {
-	// Replace comma with dot to support it as decimal separator (GH-6028).
-	// This prevents using functions like `pow()`, but using functions
-	// in EditorSpinSlider is a barely known (and barely used) feature.
-	// Instead, we'd rather support German/French keyboard layouts out of the box.
-	const String text = value_input->get_text().replace(",", ".");
-
+	String text = value_input->get_text();
 	Ref<Expression> expr;
 	expr.instance();
 	Error err = expr->parse(text);

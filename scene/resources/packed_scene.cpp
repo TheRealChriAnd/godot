@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -868,7 +868,7 @@ Error SceneState::pack(Node *p_scene) {
 	Map<Node *, int> node_map;
 	Map<Node *, int> nodepath_map;
 
-	// If using scene inheritance, pack the scene it inherits from.
+	//if using scene inheritance, pack the scene it inherits from
 	if (scene->get_scene_inherited_state().is_valid()) {
 		String path = scene->get_scene_inherited_state()->get_path();
 		Ref<PackedScene> instance = ResourceLoader::load(path);
@@ -877,8 +877,8 @@ Error SceneState::pack(Node *p_scene) {
 			base_scene_idx = _vm_get_variant(instance, variant_map);
 		}
 	}
+	//instanced, only direct sub-scnes are supported of course
 
-	// Instanced, only direct sub-scenes are supported of course.
 	Error err = _parse_node(scene, scene, -1, name_map, variant_map, node_map, nodepath_map);
 	if (err) {
 		clear();

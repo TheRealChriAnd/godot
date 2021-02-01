@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,11 +34,11 @@
 
 #include <stdio.h>
 
-Error PackedData::add_pack(const String &p_path, bool p_replace_files, size_t p_offset) {
+Error PackedData::add_pack(const String &p_path, bool p_replace_files) {
 
 	for (int i = 0; i < sources.size(); i++) {
 
-		if (sources[i]->try_open_pack(p_path, p_replace_files, p_offset)) {
+		if (sources[i]->try_open_pack(p_path, p_replace_files)) {
 
 			return OK;
 		};
@@ -132,24 +132,15 @@ PackedData::~PackedData() {
 
 //////////////////////////////////////////////////////////////////
 
-bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, size_t p_offset) {
+bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files) {
 
 	FileAccess *f = FileAccess::open(p_path, FileAccess::READ);
 	if (!f)
 		return false;
 
-	f->seek(p_offset);
-
 	uint32_t magic = f->get_32();
 
 	if (magic != PACK_HEADER_MAGIC) {
-		// loading with offset feature not supported for self contained exe files
-		if (p_offset != 0) {
-			f->close();
-			memdelete(f);
-			ERR_FAIL_V_MSG(false, "Loading self-contained executable with offset not supported.");
-		}
-
 		//maybe at the end.... self contained exe
 		f->seek_end();
 		f->seek(f->get_position() - 4);
@@ -212,7 +203,7 @@ bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, 
 		uint64_t size = f->get_64();
 		uint8_t md5[16];
 		f->get_buffer(md5, 16);
-		PackedData::get_singleton()->add_path(p_path, path, ofs + p_offset, size, md5, this, p_replace_files);
+		PackedData::get_singleton()->add_path(p_path, path, ofs, size, md5, this, p_replace_files);
 	};
 
 	f->close();
@@ -412,15 +403,9 @@ String DirAccessPack::get_drive(int p_drive) {
 	return "";
 }
 
-PackedData::PackedDir *DirAccessPack::_find_dir(String p_dir) {
+Error DirAccessPack::change_dir(String p_dir) {
 
 	String nd = p_dir.replace("\\", "/");
-
-	// Special handling since simplify_path() will forbid it
-	if (p_dir == "..") {
-		return current->parent;
-	}
-
 	bool absolute = false;
 	if (nd.begins_with("res://")) {
 		nd = nd.replace_first("res://", "");
@@ -460,22 +445,13 @@ PackedData::PackedDir *DirAccessPack::_find_dir(String p_dir) {
 
 		} else {
 
-			return NULL;
+			return ERR_INVALID_PARAMETER;
 		}
 	}
 
-	return pd;
-}
+	current = pd;
 
-Error DirAccessPack::change_dir(String p_dir) {
-
-	PackedData::PackedDir *pd = _find_dir(p_dir);
-	if (pd) {
-		current = pd;
-		return OK;
-	} else {
-		return ERR_INVALID_PARAMETER;
-	}
+	return OK;
 }
 
 String DirAccessPack::get_current_dir() {
@@ -495,18 +471,14 @@ bool DirAccessPack::file_exists(String p_file) {
 
 	p_file = fix_path(p_file);
 
-	PackedData::PackedDir *pd = _find_dir(p_file.get_base_dir());
-	if (!pd) {
-		return false;
-	}
-	return pd->files.has(p_file.get_file());
+	return current->files.has(p_file);
 }
 
 bool DirAccessPack::dir_exists(String p_dir) {
 
 	p_dir = fix_path(p_dir);
 
-	return _find_dir(p_dir) != NULL;
+	return current->subdirs.has(p_dir);
 }
 
 Error DirAccessPack::make_dir(String p_dir) {

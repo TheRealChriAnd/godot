@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -112,10 +112,7 @@ class SceneTreeDock : public VBoxContainer {
 	ToolButton *button_create_script;
 	ToolButton *button_detach_script;
 
-	Button *button_2d;
 	Button *button_3d;
-	Button *button_ui;
-	Button *button_custom;
 
 	HBoxContainer *button_hb;
 	ToolButton *edit_local, *edit_remote;

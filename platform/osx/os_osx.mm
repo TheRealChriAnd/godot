@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -30,7 +30,6 @@
 
 #include "os_osx.h"
 
-#include "core/math/geometry.h"
 #include "core/os/keyboard.h"
 #include "core/print_string.h"
 #include "core/version_generated.gen.h"
@@ -105,7 +104,6 @@ static int mouse_x = 0;
 static int mouse_y = 0;
 static int button_mask = 0;
 static bool mouse_down_control = false;
-static bool ignore_momentum_scroll = false;
 
 static Vector2 get_mouse_pos(NSPoint locationInWindow) {
 
@@ -638,30 +636,26 @@ static const NSRange kEmptyRange = { NSNotFound, 0 };
 
 - (BOOL)performDragOperation:(id<NSDraggingInfo>)sender {
 
-	Vector<String> files;
 	NSPasteboard *pboard = [sender draggingPasteboard];
-
 #if MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
-	NSArray *items = pboard.pasteboardItems;
-	for (NSPasteboardItem *item in items) {
-		NSString *path = [item stringForType:NSPasteboardTypeFileURL];
-		NSString *ns = [NSURL URLWithString:path].path;
-		char *utfs = strdup([ns UTF8String]);
-		String ret;
-		ret.parse_utf8(utfs);
-		free(utfs);
-		files.push_back(ret);
-	}
+	NSArray<NSURL *> *filenames = [pboard propertyListForType:NSPasteboardTypeFileURL];
 #else
 	NSArray *filenames = [pboard propertyListForType:NSFilenamesPboardType];
-	for (NSString *ns in filenames) {
+#endif
+
+	Vector<String> files;
+	for (NSUInteger i = 0; i < filenames.count; i++) {
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
+		NSString *ns = [[filenames objectAtIndex:i] path];
+#else
+		NSString *ns = [filenames objectAtIndex:i];
+#endif
 		char *utfs = strdup([ns UTF8String]);
 		String ret;
 		ret.parse_utf8(utfs);
 		free(utfs);
 		files.push_back(ret);
 	}
-#endif
 
 	if (files.size()) {
 		OS_OSX::singleton->main_loop->drop_files(files, 0);
@@ -1184,8 +1178,6 @@ static int remapKey(unsigned int key, unsigned int state) {
 
 - (void)keyDown:(NSEvent *)event {
 
-	ignore_momentum_scroll = true;
-
 	// Ignore all input if IME input is in progress
 	if (!imeInputEventInProgress) {
 		NSString *characters = [event characters];
@@ -1225,8 +1217,6 @@ static int remapKey(unsigned int key, unsigned int state) {
 }
 
 - (void)flagsChanged:(NSEvent *)event {
-
-	ignore_momentum_scroll = true;
 
 	// Ignore all input if IME input is in progress
 	if (!imeInputEventInProgress) {
@@ -1368,13 +1358,6 @@ inline void sendPanEvent(double dx, double dy, int modifierFlags) {
 		deltaY *= 0.03;
 	}
 
-	if ([event momentumPhase] != NSEventPhaseNone) {
-		if (ignore_momentum_scroll) {
-			return;
-		}
-	} else {
-		ignore_momentum_scroll = false;
-	}
 	if ([event phase] != NSEventPhaseNone || [event momentumPhase] != NSEventPhaseNone) {
 		sendPanEvent(deltaX, deltaY, [event modifierFlags]);
 	} else {
@@ -1610,10 +1593,8 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 	//[window_object setTitle:[NSString stringWithUTF8String:"GodotEnginies"]];
 	[window_object setContentView:window_view];
 	[window_object setDelegate:window_delegate];
-	if (!is_no_window_mode_enabled()) {
-		[window_object setAcceptsMouseMovedEvents:YES];
-		[((NSWindow *)window_object) center];
-	}
+	[window_object setAcceptsMouseMovedEvents:YES];
+	[(NSWindow *)window_object center];
 
 	[window_object setRestorable:NO];
 
@@ -1695,16 +1676,11 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 
 	set_use_vsync(p_desired.use_vsync);
 
-	if (!is_no_window_mode_enabled()) {
-		[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-		[NSApp activateIgnoringOtherApps:YES];
-	}
+	[NSApp activateIgnoringOtherApps:YES];
 
 	_update_window();
 
-	if (!is_no_window_mode_enabled()) {
-		[window_object makeKeyAndOrderFront:nil];
-	}
+	[window_object makeKeyAndOrderFront:nil];
 
 	on_top = p_desired.always_on_top;
 	if (p_desired.always_on_top) {
@@ -1774,6 +1750,8 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 
 	power_manager = memnew(PowerOSX);
 
+	_ensure_user_data_dir();
+
 	restore_rect = Rect2(get_window_position(), get_window_size());
 
 	if (p_desired.layered) {
@@ -1781,10 +1759,6 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 	}
 
 	update_real_mouse_position();
-
-	if (is_no_window_mode_enabled()) {
-		[NSApp hide:nil];
-	}
 
 	return OK;
 }
@@ -1893,11 +1867,6 @@ typedef UnixTerminalLogger OSXTerminalLogger;
 #endif
 
 void OS_OSX::alert(const String &p_alert, const String &p_title) {
-	if (is_no_window_mode_enabled()) {
-		print_line("ALERT: " + p_title + ": " + p_alert);
-		return;
-	}
-
 	// Set OS X-compliant variables
 	NSAlert *window = [[NSAlert alloc] init];
 	NSString *ns_title = [NSString stringWithUTF8String:p_title.utf8().get_data()];
@@ -2165,13 +2134,6 @@ void OS_OSX::set_window_title(const String &p_title) {
 	title = p_title;
 
 	[window_object setTitle:[NSString stringWithUTF8String:p_title.utf8().get_data()]];
-}
-
-void OS_OSX::set_window_mouse_passthrough(const PoolVector2Array &p_region) {
-	mpath.clear();
-	for (int i = 0; i < p_region.size(); i++) {
-		mpath.push_back(p_region[i]);
-	}
 }
 
 void OS_OSX::set_native_icon(const String &p_filename) {
@@ -2465,10 +2427,6 @@ int OS_OSX::get_current_screen() const {
 };
 
 void OS_OSX::set_current_screen(int p_screen) {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
-
 	Vector2 wpos = get_window_position() - get_screen_position(get_current_screen());
 	set_window_position(wpos + get_screen_position(p_screen));
 };
@@ -2505,15 +2463,8 @@ int OS_OSX::get_screen_dpi(int p_screen) const {
 	NSArray *screenArray = [NSScreen screens];
 	if ((NSUInteger)p_screen < [screenArray count]) {
 		NSDictionary *description = [[screenArray objectAtIndex:p_screen] deviceDescription];
-
-		const NSSize displayPixelSize = [[description objectForKey:NSDeviceSize] sizeValue];
-		const CGSize displayPhysicalSize = CGDisplayScreenSize([[description objectForKey:@"NSScreenNumber"] unsignedIntValue]);
-		float scale = [[screenArray objectAtIndex:p_screen] backingScaleFactor];
-
-		float den2 = (displayPhysicalSize.width / 25.4f) * (displayPhysicalSize.width / 25.4f) + (displayPhysicalSize.height / 25.4f) * (displayPhysicalSize.height / 25.4f);
-		if (den2 > 0.0f) {
-			return ceil(sqrt(displayPixelSize.width * displayPixelSize.width + displayPixelSize.height * displayPixelSize.height) / sqrt(den2) * scale);
-		}
+		NSSize displayDPI = [[description objectForKey:NSDeviceResolution] sizeValue];
+		return (displayDPI.width + displayDPI.height) / 2;
 	}
 
 	return 72;
@@ -2615,9 +2566,6 @@ Point2 OS_OSX::get_window_position() const {
 }
 
 void OS_OSX::set_native_window_position(const Point2 &p_position) {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
 
 	NSPoint pos;
 	float displayScale = get_screen_max_scale();
@@ -2631,10 +2579,6 @@ void OS_OSX::set_native_window_position(const Point2 &p_position) {
 };
 
 void OS_OSX::set_window_position(const Point2 &p_position) {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
-
 	Point2 position = p_position;
 	// OS X native y-coordinate relative to get_screens_origin() is negative,
 	// Godot passes a positive value
@@ -2665,10 +2609,6 @@ Size2 OS_OSX::get_min_window_size() const {
 
 void OS_OSX::set_min_window_size(const Size2 p_size) {
 
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
-
 	if ((p_size != Size2()) && (max_size != Size2()) && ((p_size.x > max_size.x) || (p_size.y > max_size.y))) {
 		ERR_PRINT("Minimum window size can't be larger than maximum window size!");
 		return;
@@ -2685,10 +2625,6 @@ void OS_OSX::set_min_window_size(const Size2 p_size) {
 
 void OS_OSX::set_max_window_size(const Size2 p_size) {
 
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
-
 	if ((p_size != Size2()) && ((p_size.x < min_size.x) || (p_size.y < min_size.y))) {
 		ERR_PRINT("Maximum window size can't be smaller than minimum window size!");
 		return;
@@ -2704,10 +2640,6 @@ void OS_OSX::set_max_window_size(const Size2 p_size) {
 }
 
 void OS_OSX::set_window_size(const Size2 p_size) {
-
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
 
 	Size2 size = p_size / get_screen_max_scale();
 
@@ -2728,9 +2660,6 @@ void OS_OSX::set_window_size(const Size2 p_size) {
 };
 
 void OS_OSX::set_window_fullscreen(bool p_enabled) {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
 
 	if (zoomed != p_enabled) {
 		if (layered_window)
@@ -2761,9 +2690,6 @@ bool OS_OSX::is_window_fullscreen() const {
 };
 
 void OS_OSX::set_window_resizable(bool p_enabled) {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
 
 	if (p_enabled)
 		[window_object setStyleMask:[window_object styleMask] | NSWindowStyleMaskResizable];
@@ -2779,9 +2705,6 @@ bool OS_OSX::is_window_resizable() const {
 };
 
 void OS_OSX::set_window_minimized(bool p_enabled) {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
 
 	if (p_enabled)
 		[window_object performMiniaturize:nil];
@@ -2798,9 +2721,6 @@ bool OS_OSX::is_window_minimized() const {
 };
 
 void OS_OSX::set_window_maximized(bool p_enabled) {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
 
 	if (p_enabled) {
 		restore_rect = Rect2(get_window_position(), get_window_size());
@@ -2819,19 +2739,12 @@ bool OS_OSX::is_window_maximized() const {
 };
 
 void OS_OSX::move_window_to_foreground() {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
 
 	[[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
 	[window_object makeKeyAndOrderFront:nil];
 }
 
 void OS_OSX::set_window_always_on_top(bool p_enabled) {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
-
 	on_top = p_enabled;
 
 	if (is_window_always_on_top() == p_enabled)
@@ -2852,9 +2765,6 @@ bool OS_OSX::is_window_focused() const {
 }
 
 void OS_OSX::request_attention() {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
 
 	[NSApp requestUserAttention:NSCriticalRequest];
 }
@@ -2886,18 +2796,12 @@ void OS_OSX::set_window_per_pixel_transparency_enabled(bool p_enabled) {
 		}
 		[context update];
 		NSRect frame = [window_object frame];
-
-		if (!is_no_window_mode_enabled()) {
-			[window_object setFrame:NSMakeRect(frame.origin.x, frame.origin.y, 1, 1) display:YES];
-			[window_object setFrame:frame display:YES];
-		}
+		[window_object setFrame:NSMakeRect(frame.origin.x, frame.origin.y, 1, 1) display:YES];
+		[window_object setFrame:frame display:YES];
 	}
 }
 
 void OS_OSX::set_borderless_window(bool p_borderless) {
-	if (is_no_window_mode_enabled()) {
-		return;
-	}
 
 	// OrderOut prevents a lose focus bug with the window
 	[window_object orderOut:nil];
@@ -3149,23 +3053,6 @@ void OS_OSX::process_events() {
 	}
 	process_key_events();
 
-	if (mpath.size() > 0) {
-		const Vector2 mpos = get_mouse_pos([window_object mouseLocationOutsideOfEventStream]);
-		if (Geometry::is_point_in_polygon(mpos, mpath)) {
-			if ([window_object ignoresMouseEvents]) {
-				[window_object setIgnoresMouseEvents:NO];
-			}
-		} else {
-			if (![window_object ignoresMouseEvents]) {
-				[window_object setIgnoresMouseEvents:YES];
-			}
-		}
-	} else {
-		if ([window_object ignoresMouseEvents]) {
-			[window_object setIgnoresMouseEvents:NO];
-		}
-	}
-
 	[autoreleasePool drain];
 	autoreleasePool = [[NSAutoreleasePool alloc] init];
 
@@ -3287,12 +3174,6 @@ void OS_OSX::set_mouse_mode(MouseMode p_mode) {
 			CGDisplayHideCursor(kCGDirectMainDisplay);
 		}
 		CGAssociateMouseAndMouseCursorPosition(false);
-
-		const NSRect contentRect = [window_view frame];
-		NSRect pointInWindowRect = NSMakeRect(contentRect.size.width / 2, contentRect.size.height / 2, 0, 0);
-		NSPoint pointOnScreen = [[window_view window] convertRectToScreen:pointInWindowRect].origin;
-		CGPoint lMouseWarpPos = { pointOnScreen.x, CGDisplayBounds(CGMainDisplayID()).size.height - pointOnScreen.y };
-		CGWarpMouseCursorPosition(lMouseWarpPos);
 	} else if (p_mode == MOUSE_MODE_HIDDEN) {
 		if (mouse_mode == MOUSE_MODE_VISIBLE || mouse_mode == MOUSE_MODE_CONFINED) {
 			CGDisplayHideCursor(kCGDirectMainDisplay);
@@ -3385,6 +3266,9 @@ OS_OSX::OS_OSX() {
 
 	// Implicitly create shared NSApplication instance
 	[GodotApplication sharedApplication];
+
+	// In case we are unbundled, make us a proper UI application
+	[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 
 	// Menu bar setup must go between sharedApplication above and
 	// finishLaunching below, in order to properly emulate the behavior

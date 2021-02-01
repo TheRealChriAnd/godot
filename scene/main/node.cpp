@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1901,23 +1901,37 @@ String Node::get_editor_description() const {
 }
 
 void Node::set_editable_instance(Node *p_node, bool p_editable) {
+
 	ERR_FAIL_NULL(p_node);
 	ERR_FAIL_COND(!is_a_parent_of(p_node));
+	NodePath p = get_path_to(p_node);
 	if (!p_editable) {
-		p_node->data.editable_instance = false;
+		data.editable_instances.erase(p);
 		// Avoid this flag being needlessly saved;
 		// also give more visual feedback if editable children is re-enabled
 		set_display_folded(false);
 	} else {
-		p_node->data.editable_instance = true;
+		data.editable_instances[p] = true;
 	}
 }
 
 bool Node::is_editable_instance(const Node *p_node) const {
+
 	if (!p_node)
 		return false; //easier, null is never editable :)
 	ERR_FAIL_COND_V(!is_a_parent_of(p_node), false);
-	return p_node->data.editable_instance;
+	NodePath p = get_path_to(p_node);
+	return data.editable_instances.has(p);
+}
+
+void Node::set_editable_instances(const HashMap<NodePath, int> &p_editable_instances) {
+
+	data.editable_instances = p_editable_instances;
+}
+
+HashMap<NodePath, int> Node::get_editable_instances() const {
+
+	return data.editable_instances;
 }
 
 void Node::set_scene_instance_state(const Ref<SceneState> &p_state) {
@@ -2891,6 +2905,7 @@ void Node::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("tree_exiting"));
 	ADD_SIGNAL(MethodInfo("tree_exited"));
 
+	ADD_GROUP("Pause", "pause_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "pause_mode", PROPERTY_HINT_ENUM, "Inherit,Stop,Process"), "set_pause_mode", "get_pause_mode");
 
 #ifdef ENABLE_DEPRECATED
@@ -2956,7 +2971,6 @@ Node::Node() {
 	data.use_placeholder = false;
 	data.display_folded = false;
 	data.ready_first = true;
-	data.editable_instance = false;
 
 	orphan_node_count++;
 }

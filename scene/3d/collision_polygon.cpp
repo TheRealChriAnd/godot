@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2020 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2020 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -164,22 +164,15 @@ bool CollisionPolygon::is_disabled() const {
 
 String CollisionPolygon::get_configuration_warning() const {
 
-	String warning = Spatial::get_configuration_warning();
 	if (!Object::cast_to<CollisionObject>(get_parent())) {
-		if (warning != String()) {
-			warning += "\n\n";
-		}
-		warning += TTR("CollisionPolygon only serves to provide a collision shape to a CollisionObject derived node. Please only use it as a child of Area, StaticBody, RigidBody, KinematicBody, etc. to give them a shape.");
+		return TTR("CollisionPolygon only serves to provide a collision shape to a CollisionObject derived node. Please only use it as a child of Area, StaticBody, RigidBody, KinematicBody, etc. to give them a shape.");
 	}
 
 	if (polygon.empty()) {
-		if (warning != String()) {
-			warning += "\n\n";
-		}
-		warning += TTR("An empty CollisionPolygon has no effect on collision.");
+		return TTR("An empty CollisionPolygon has no effect on collision.");
 	}
 
-	return warning;
+	return String();
 }
 
 bool CollisionPolygon::_is_editable_3d_polygon() const {

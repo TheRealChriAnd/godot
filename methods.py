@@ -603,11 +603,9 @@ def generate_vs_project(env, num_jobs):
         env.AddToVSProject(env.servers_sources)
         env.AddToVSProject(env.editor_sources)
 
-        
         env["MSVSBUILDCOM"] = build_commandline("scons")
         env["MSVSREBUILDCOM"] = build_commandline("scons vsproj=yes")
         env["MSVSCLEANCOM"] = build_commandline("scons --clean")
-
 
         # This version information (Win32, x64, Debug, Release, Release_Debug seems to be
         # required for Visual Studio to understand that it needs to generate an NMAKE

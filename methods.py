@@ -577,7 +577,7 @@ def generate_vs_project(env, num_jobs):
                 'call "' + batch_file + '" !plat!',
             ]
 
-            	            # windows allows us to have spaces in paths, so we need
+            # windows allows us to have spaces in paths, so we need
             # to double quote off the directory. However, the path ends
             # in a backslash, so we need to remove this, lest it escape the
             # last double quote off, confusing MSBuild

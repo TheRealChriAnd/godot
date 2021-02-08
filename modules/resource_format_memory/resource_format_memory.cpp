@@ -37,6 +37,8 @@
 #include "core/project_settings.h"
 #include "core/version.h"
 
+#include "core/io/file_access_memory.h"
+
 //#define print_bl(m_what) print_line(m_what)
 #define print_bl(m_what) (void)(m_what)
 
@@ -993,7 +995,10 @@ Ref<ResourceInteractiveLoader> ResourceFormatLoaderMemory::load_interactive(cons
 		*r_error = ERR_FILE_CANT_OPEN;
 
 	Error err;
-	FileAccess *f = FileAccess::open(p_path, FileAccess::READ, &err);
+	//FileAccess *f = FileAccess::open(p_path, FileAccess::READ, &err);
+
+	FileAccessMemory* f = memnew(FileAccessMemory);
+	err = f->_open("data", FileAccess::READ);
 
 	ERR_FAIL_COND_V_MSG(err != OK, Ref<ResourceInteractiveLoader>(), "Cannot open file '" + p_path + "'.");
 
@@ -1756,7 +1761,10 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 			memdelete(f);
 
 	} else {
-		f = FileAccess::open(p_path, FileAccess::WRITE, &err);
+		//f = FileAccess::open(p_path, FileAccess::WRITE, &err);
+		FileAccessMemory* file = memnew(FileAccessMemory);
+		err = file->_open("data", FileAccess::WRITE);
+		f = file;
 	}
 
 	ERR_FAIL_COND_V_MSG(err != OK, err, "Cannot create file '" + p_path + "'.");

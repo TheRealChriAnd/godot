@@ -1058,6 +1058,10 @@ bool GDScriptInstance::set(const StringName &p_name, const Variant &p_value) {
 	return false;
 }
 
+
+/*
+* This is the get function used in GDScript
+*/
 bool GDScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
 
 	const GDScript *sptr = script.ptr();
@@ -1065,25 +1069,30 @@ bool GDScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
 
 		{
 			const Map<StringName, GDScript::MemberInfo>::Element *E = script->member_indices.find(p_name);
-			if (E) {
-				if (E->get().getter) {
+			if (E) //Is it a member variable?
+			{
+				if (E->get().getter) //Does the member variable have a getter function?
+				{
 					Variant::CallError err;
-					r_ret = const_cast<GDScriptInstance *>(this)->call(E->get().getter, NULL, 0, err);
-					if (err.error == Variant::CallError::CALL_OK) {
+					r_ret = const_cast<GDScriptInstance *>(this)->call(E->get().getter, NULL, 0, err); // Call the getter function
+					if (err.error == Variant::CallError::CALL_OK)
+					{
 						return true;
 					}
 				}
-				r_ret = members[E->get().index];
+				r_ret = members[E->get().index]; //Return the value of the variable if no getter was found or the getter function failed
 				return true; //index found
 			}
 		}
 
 		{
-
+			// Check if it is a constant, check for every parent if not found in the child
 			const GDScript *sl = sptr;
-			while (sl) {
+			while (sl)
+			{
 				const Map<StringName, Variant>::Element *E = sl->constants.find(p_name);
-				if (E) {
+				if (E)
+				{
 					r_ret = E->get();
 					return true; //index found
 				}
@@ -1092,15 +1101,17 @@ bool GDScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
 		}
 
 		{
+			// Call the _get(p_name) function
 			const Map<StringName, GDScriptFunction *>::Element *E = sptr->member_functions.find(GDScriptLanguage::get_singleton()->strings._get);
-			if (E) {
-
+			if (E)
+			{
 				Variant name = p_name;
 				const Variant *args[1] = { &name };
 
 				Variant::CallError err;
 				Variant ret = const_cast<GDScriptFunction *>(E->get())->call(const_cast<GDScriptInstance *>(this), (const Variant **)args, 1, err);
-				if (err.error == Variant::CallError::CALL_OK && ret.get_type() != Variant::NIL) {
+				if (err.error == Variant::CallError::CALL_OK && ret.get_type() != Variant::NIL)
+				{
 					r_ret = ret;
 					return true;
 				}
@@ -1228,6 +1239,7 @@ bool GDScriptInstance::has_method(const StringName &p_method) const {
 
 	return false;
 }
+
 Variant GDScriptInstance::call(const StringName &p_method, const Variant **p_args, int p_argcount, Variant::CallError &r_error) {
 
 	GDScript *sptr = script.ptr();

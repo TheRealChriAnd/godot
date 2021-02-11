@@ -1823,12 +1823,15 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 			List<PropertyInfo> property_list;
 			E->get()->get_property_list(&property_list);
 
+			//WARN_PRINT(String("RESOURCE: " + E->get()->get_class()));
+
 			for (List<PropertyInfo>::Element *F = property_list.front(); F; F = F->next()) {
 
 				if (skip_editor && F->get().name.begins_with("__editor"))
 					continue;
 				if ((F->get().usage & PROPERTY_USAGE_STORAGE)) {
 					Property p;
+					//WARN_PRINT(String("PROP: " + F->get().name));
 					p.name_idx = get_string_index(F->get().name);
 
 					if (F->get().usage & PROPERTY_USAGE_RESOURCE_NOT_PERSISTENT) {
@@ -1859,6 +1862,7 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 	f->store_32(strings.size()); //string table size
 	for (int i = 0; i < strings.size(); i++) {
 		save_unicode_string(f, strings[i]);
+		//WARN_PRINT(String("StringTable: " + strings[i]));
 	}
 
 	// save external resource table
@@ -1876,6 +1880,7 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 		String path = save_order[i]->get_path();
 		path = relative_paths ? local_path.path_to_file(path) : path;
 		save_unicode_string(f, path);
+		//WARN_PRINT(String("EXT_Table: " + path));
 	}
 	// save internal resource table
 	f->store_32(saved_resources.size()); //amount of internal resources
@@ -1912,6 +1917,7 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 			}
 
 			save_unicode_string(f, "local://" + itos(r->get_subindex()));
+			//WARN_PRINT(String("LOC_Table: ") + "local://" + itos(r->get_subindex()));
 			if (takeover_paths) {
 				r->set_path(p_path + "::" + itos(r->get_subindex()), true);
 			}
@@ -1920,6 +1926,7 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 #endif
 		} else {
 			save_unicode_string(f, r->get_path()); //actual external
+			//WARN_PRINT(String("LOC_Table: ") + r->get_path());
 		}
 		ofs_pos.push_back(f->get_position());
 		f->store_64(0); //offset in 64 bits
@@ -1934,6 +1941,7 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 
 		ofs_table.push_back(f->get_position());
 		save_unicode_string(f, rd.type);
+		//WARN_PRINT(String("RES_Table: ") + rd.type);
 		f->store_32(rd.properties.size());
 
 		for (List<Property>::Element *F = rd.properties.front(); F; F = F->next()) {
@@ -1941,6 +1949,7 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 			Property &p = F->get();
 			f->store_32(p.name_idx);
 			_write_variant(p.value, F->get().pi);
+			//WARN_PRINT(String("PROP: ") + strings[p.name_idx] + " | " + p.value);
 		}
 	}
 

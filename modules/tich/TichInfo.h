@@ -7,9 +7,11 @@ class TichInfo
 
 public:
 	static bool IsSaving();
+	static bool IsLoading();
 
 private:
 	static bool s_IsSaving;
+	static bool s_IsLoading;
 };
 
 #endif

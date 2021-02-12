@@ -5,6 +5,8 @@
 
 class TichSystem : public Reference
 {
+	friend class Node;
+
 public:
 	TichSystem();
 
@@ -13,6 +15,7 @@ public:
 private:
 	void Save();
 	void Load();
+	void OnReadyPost();
 	void MakeSceneOwner();
 	void SetOwnerRecursively(Node* node, Node* owner);
 

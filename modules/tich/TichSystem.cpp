@@ -8,6 +8,9 @@
 #include "packed_scene.h"
 #include "TichInfo.h"
 
+//#define SAVE_FILE "res://saved.tich"
+#define SAVE_FILE "res://saved.tscn"
+
 TichSystem* TichSystem::s_Instance = nullptr;
 
 TichSystem::TichSystem()
@@ -70,7 +73,7 @@ void TichSystem::Save()
 		return;
 	}
 
-	result = ResourceSaver::save("res://saved.tich", packedScene);
+	result = ResourceSaver::save(SAVE_FILE, packedScene);
 
 	if (result != Error::OK)
 	{
@@ -86,9 +89,13 @@ void TichSystem::Save()
 
 void TichSystem::Load()
 {
+	if (TichInfo::s_IsLoading)
+		return;
+
+	TichInfo::s_IsLoading = true;
 	WARN_PRINT("Loading");
 
-	Error result = SceneTree::get_singleton()->change_scene("res://saved.tich");
+	Error result = SceneTree::get_singleton()->change_scene(SAVE_FILE);
 
 	currentTreeVersion = SceneTree::get_singleton()->get_tree_version();
 
@@ -99,6 +106,11 @@ void TichSystem::Load()
 	}
 
 	WARN_PRINT("Scene Loaded Successfully");
+}
+
+void TichSystem::OnReadyPost()
+{
+	TichInfo::s_IsLoading = false;
 }
 
 void TichSystem::MakeSceneOwner()

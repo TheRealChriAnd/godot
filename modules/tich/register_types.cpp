@@ -20,7 +20,7 @@ static Ref<TichSystem> tichSystem;
 void register_tich_types()
 {
 	Vector<uint8_t> data;
-	data.resize(4096);
+	data.resize(1024 * 1024 * 4);
 
 	FileAccessMemory::register_file("data", data);
 

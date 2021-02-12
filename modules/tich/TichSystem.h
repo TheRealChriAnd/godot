@@ -22,6 +22,7 @@ public:
 private:
 	bool lastButtonStateF1;
 	bool lastButtonStateF2;
+	uint64_t currentTreeVersion;
 
 private:
 	static TichSystem* s_Instance;

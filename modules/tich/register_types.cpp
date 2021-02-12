@@ -2,6 +2,8 @@
 
 #include "resource_format_memory.h"
 #include "packed_scene.h"
+#include "TichSystem.h"
+
 
 #include "core/class_db.h"
 
@@ -12,6 +14,8 @@
 
 static Ref<ResourceFormatSaverMemory> resource_saver_memory;
 static Ref<ResourceFormatLoaderMemory> resource_loader_memory;
+
+static Ref<TichSystem> tichSystem;
 
 void register_tich_types()
 {
@@ -25,6 +29,10 @@ void register_tich_types()
 
 	resource_loader_memory.instance();
 	ResourceLoader::add_resource_format_loader(resource_loader_memory);
+
+	ClassDB::register_class<TichSystem>();
+
+	tichSystem.instance();
 }
 
 void unregister_tich_types()
@@ -36,4 +44,6 @@ void unregister_tich_types()
 
 	ResourceLoader::remove_resource_format_loader(resource_loader_memory);
 	resource_loader_memory.unref();
+
+	tichSystem.unref();
 }

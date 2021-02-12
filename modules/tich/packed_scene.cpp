@@ -39,6 +39,8 @@
 #include "scene/gui/control.h"
 #include "scene/main/instance_placeholder.h"
 
+#include "TichInfo.h"
+
 #define PACKED_SCENE_VERSION 2
 
 bool SceneState::can_instance() const {
@@ -444,15 +446,16 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 						nd.instance = _vm_get_variant(p_node->get_filename(), variant_map);
 						nd.instance |= FLAG_INSTANCE_IS_PLACEHOLDER;
 					} else {
-						//must instance ourselves
 
-
-						/*Ref<PackedScene> instance = ResourceLoader::load(p_node->get_filename());
-						if (!instance.is_valid()) {
-							return ERR_CANT_OPEN;
+						if (!TichInfo::IsSaving())
+						{
+							//must instance ourselves
+							Ref<PackedScene> instance = ResourceLoader::load(p_node->get_filename());
+							if (!instance.is_valid()) {
+								return ERR_CANT_OPEN;
+							}
+							nd.instance = _vm_get_variant(instance, variant_map);
 						}
-
-						nd.instance = _vm_get_variant(instance, variant_map);*/
 					}
 				}
 				n = NULL;
@@ -487,10 +490,19 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 
 		uint32_t usage = E->get().usage;
 		if (!(usage & PROPERTY_USAGE_STORAGE)) {
-			if (!(usage & PROPERTY_USAGE_SCRIPT_VARIABLE)) {
+
+			if (!TichInfo::IsSaving())
+			{
 				continue;
 			}
-			WARN_PRINT(String("VIP Node: " + E->get().name));
+			else
+			{
+				if (!(usage & PROPERTY_USAGE_SCRIPT_VARIABLE))
+				{
+					continue;
+				}
+				WARN_PRINT(String("Adding Non Exported var: [" + E->get().name + "]"));
+			}
 		}
 
 		String name = E->get().name;

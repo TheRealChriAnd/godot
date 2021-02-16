@@ -8,6 +8,8 @@
 #include "packed_scene.h"
 #include "TichInfo.h"
 
+#include "scene/2d/parallax_background.h"
+
 //#define SAVE_FILE "res://saved.tich"
 #define SAVE_FILE "res://saved.tscn"
 
@@ -59,11 +61,28 @@ void TichSystem::Save()
 	TichInfo::s_IsSaving = true;
 	WARN_PRINT("Saving");
 
+
+	Vector<ParallaxBackground *> vector;
+	Vector<bool> values;
+	GetParallaxBackgrounds(vector);
+	for (int i = 0; i < vector.size(); i++)
+	{
+		ParallaxBackground* pb = vector.get(i);
+		values.push_back(pb->is_ignore_camera_zoom());
+		pb->set_ignore_camera_zoom(true);
+	}
+
+
 	Ref<PackedScene> packedScene;
 	packedScene.instance();
 
 	Node* scene = SceneTree::get_singleton()->get_current_scene();
 	Error result = packedScene->pack(scene);
+
+
+	for (int i = 0; i < vector.size(); i++)
+		vector.get(i)->set_ignore_camera_zoom(values.get(i));
+
 
 	if (result != Error::OK)
 	{
@@ -126,6 +145,25 @@ void TichSystem::SetOwnerRecursively(Node* node, Node* owner)
 
 	for (int i = 0; i < node->get_child_count(); i++)
 		SetOwnerRecursively(node->get_child(i), owner);
+}
+
+void TichSystem::GetParallaxBackgrounds(Vector<ParallaxBackground*>& vector, Node* node)
+{
+	if (!node)
+	{
+		node = SceneTree::get_singleton()->get_current_scene();
+		if (!node)
+			return;
+	}
+
+	ParallaxBackground* parallaxBackground = dynamic_cast<ParallaxBackground*>(node);
+	if (parallaxBackground)
+		vector.push_back(parallaxBackground);
+
+	for (int i = 0; i < node->get_child_count(); i++)
+	{
+		GetParallaxBackgrounds(vector, node->get_child(i));
+	}
 }
 
 TichSystem *TichSystem::GetInstance()

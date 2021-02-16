@@ -3,6 +3,8 @@
 
 #include "core/reference.h"
 
+class ParallaxBackground;
+
 class TichSystem : public Reference
 {
 	friend class Node;
@@ -18,6 +20,7 @@ private:
 	void OnReadyPost();
 	void MakeSceneOwner();
 	void SetOwnerRecursively(Node* node, Node* owner);
+	void GetParallaxBackgrounds(Vector<ParallaxBackground*>& vector, Node* node = nullptr);
 
 public:
 	static TichSystem* GetInstance();

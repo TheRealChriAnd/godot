@@ -486,9 +486,16 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 	p_node->get_property_list(&plist);
 	StringName type = p_node->get_class();
 
+
+	Variant value;
+	String name;
+
 	for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next()) {
 
-		uint32_t usage = E->get().usage;
+		PropertyInfo& propertyInfo = E->get();
+
+		uint32_t usage = propertyInfo.usage;
+
 		if (!(usage & PROPERTY_USAGE_STORAGE)) {
 
 			if (!TichInfo::IsSaving())
@@ -501,12 +508,23 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 				{
 					continue;
 				}
-				WARN_PRINT(String("Adding Non Exported var: [" + E->get().name + "]"));
+
+				name = E->get().name;
+				value = p_node->get(E->get().name);
+
+				Node *node = value;
+				if (node)
+				{
+					WARN_PRINT(String("Skipping var: [" + E->get().name + "]"));
+					continue;
+				}
 			}
 		}
-
-		String name = E->get().name;
-		Variant value = p_node->get(E->get().name);
+		else
+		{
+			name = E->get().name;
+			value = p_node->get(E->get().name);
+		}
 
 		bool isdefault = false;
 		Variant default_value = ClassDB::class_get_default_property_value(type, name);

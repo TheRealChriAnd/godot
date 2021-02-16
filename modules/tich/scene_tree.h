@@ -358,7 +358,11 @@ public:
 	int64_t get_frame() const;
 	int64_t get_event_count() const;
 
+	uint64_t get_tree_version() const;
+
 	int get_node_count() const;
+
+
 
 	void queue_delete(Object *p_object);
 

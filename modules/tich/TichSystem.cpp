@@ -4,10 +4,7 @@
 
 #include "core/os/keyboard.h"
 
-#include "scene/main/scene_tree.h"
-
-#include "scene/main/viewport.h"
-
+#include "scene_tree.h"
 #include "packed_scene.h"
 #include "TichInfo.h"
 
@@ -19,6 +16,7 @@ TichSystem* TichSystem::s_Instance = nullptr;
 TichSystem::TichSystem()
 {
 	s_Instance = this;
+	currentTreeVersion = 1;
 }
 
 void TichSystem::Update(float dts)
@@ -45,14 +43,22 @@ void TichSystem::Update(float dts)
 
 	lastButtonStateF1 = buttonStateF1;
 	lastButtonStateF2 = buttonStateF2;
+
+	if (currentTreeVersion != SceneTree::get_singleton()->get_tree_version())
+	{
+		MakeSceneOwner();
+
+		currentTreeVersion = SceneTree::get_singleton()->get_tree_version();
+
+		WARN_PRINT("TreeVersion Changed")
+	}
+
 }
 
 void TichSystem::Save()
 {
 	TichInfo::s_IsSaving = true;
 	WARN_PRINT("Saving");
-
-	MakeSceneOwner();
 
 	Ref<PackedScene> packedScene;
 	packedScene.instance();
@@ -90,6 +96,8 @@ void TichSystem::Load()
 	WARN_PRINT("Loading");
 
 	Error result = SceneTree::get_singleton()->change_scene(SAVE_FILE);
+
+	currentTreeVersion = SceneTree::get_singleton()->get_tree_version();
 
 	if (result != Error::OK)
 	{

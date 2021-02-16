@@ -2160,3 +2160,8 @@ SceneTree::~SceneTree() {
 
 	if (singleton == this) singleton = NULL;
 }
+
+uint64_t SceneTree::get_tree_version() const
+{
+	return tree_version;
+}

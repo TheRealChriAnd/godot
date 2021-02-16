@@ -52,7 +52,6 @@ void TichSystem::Update(float dts)
 
 		WARN_PRINT("TreeVersion Changed")
 	}
-
 }
 
 void TichSystem::Save()
@@ -116,7 +115,8 @@ void TichSystem::OnReadyPost()
 void TichSystem::MakeSceneOwner()
 {
 	Node* scene = SceneTree::get_singleton()->get_current_scene();
-	SetOwnerRecursively(scene, scene);
+	if (scene)
+		SetOwnerRecursively(scene, scene);
 }
 
 void TichSystem::SetOwnerRecursively(Node* node, Node* owner)

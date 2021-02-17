@@ -1207,15 +1207,15 @@ void AnimationPlayer::play(const StringName &p_name, float p_custom_blend, float
 	c.current.from = &animation_set[name];
 
 	if (c.assigned != name) { // reset
-		c.current.pos = p_from_end ? c.current.from->animation->get_length() : 0;
-		WARN_PRINT("Reset 1");
+		if (!(c.assigned == ""))
+		{
+			c.current.pos = p_from_end ? c.current.from->animation->get_length() : 0;
+		}	
 	} else {
 		if (p_from_end && c.current.pos == 0) {
-			WARN_PRINT("Reset 2");
 			// Animation reset BUT played backwards, set position to the end
 			c.current.pos = c.current.from->animation->get_length();
 		} else if (!p_from_end && c.current.pos == c.current.from->animation->get_length()) {
-			WARN_PRINT("Reset 3");
 			// Animation resumed but already ended, set position to the beginning
 			c.current.pos = 0;
 		}
@@ -1365,7 +1365,7 @@ bool AnimationPlayer::is_valid() const {
 
 float AnimationPlayer::get_current_animation_position() const {
 
-	ERR_FAIL_COND_V(!playback.current.from, 0);
+	//ERR_FAIL_COND_V(!playback.current.from, 0);
 	return playback.current.pos;
 }
 

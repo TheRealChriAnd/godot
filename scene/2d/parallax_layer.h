@@ -37,6 +37,8 @@ class ParallaxLayer : public Node2D {
 
 	GDCLASS(ParallaxLayer, Node2D);
 
+	friend class TichSystem;
+
 	Point2 orig_offset;
 	Point2 orig_scale;
 	Size2 motion_scale;
@@ -46,9 +48,17 @@ class ParallaxLayer : public Node2D {
 
 	Point2 screen_offset;
 
+private:
+	Point2 current_offset;
+	Point2 current_scale;
+
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
+
+private:
+	void pre_save();
+	void post_save();
 
 public:
 	void set_motion_offset(const Size2 &p_offset);

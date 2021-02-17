@@ -1,13 +1,12 @@
 #include "TichSystem.h"
 
-#include "main/input_default.h"
-
-#include "core/os/keyboard.h"
-
 #include "scene_tree.h"
+#include "scene/2d/parallax_layer.h"
 #include "packed_scene.h"
 #include "TichInfo.h"
 
+#include "main/input_default.h"
+#include "core/os/keyboard.h"
 #include "scene/2d/parallax_background.h"
 
 //#define SAVE_FILE "res://saved.tich"
@@ -61,17 +60,7 @@ void TichSystem::Save()
 	TichInfo::s_IsSaving = true;
 	WARN_PRINT("Saving");
 
-
-	Vector<ParallaxBackground *> vector;
-	Vector<bool> values;
-	GetParallaxBackgrounds(vector);
-	for (int i = 0; i < vector.size(); i++)
-	{
-		ParallaxBackground* pb = vector.get(i);
-		values.push_back(pb->is_ignore_camera_zoom());
-		pb->set_ignore_camera_zoom(true);
-	}
-
+	OnPreSave();
 
 	Ref<PackedScene> packedScene;
 	packedScene.instance();
@@ -79,10 +68,7 @@ void TichSystem::Save()
 	Node* scene = SceneTree::get_singleton()->get_current_scene();
 	Error result = packedScene->pack(scene);
 
-
-	for (int i = 0; i < vector.size(); i++)
-		vector.get(i)->set_ignore_camera_zoom(values.get(i));
-
+	OnPostSave();
 
 	if (result != Error::OK)
 	{
@@ -147,7 +133,7 @@ void TichSystem::SetOwnerRecursively(Node* node, Node* owner)
 		SetOwnerRecursively(node->get_child(i), owner);
 }
 
-void TichSystem::GetParallaxBackgrounds(Vector<ParallaxBackground*>& vector, Node* node)
+void TichSystem::GetParallaxBackgrounds(Vector<ParallaxBackground*>* vector, Node* node)
 {
 	if (!node)
 	{
@@ -158,12 +144,45 @@ void TichSystem::GetParallaxBackgrounds(Vector<ParallaxBackground*>& vector, Nod
 
 	ParallaxBackground* parallaxBackground = dynamic_cast<ParallaxBackground*>(node);
 	if (parallaxBackground)
-		vector.push_back(parallaxBackground);
+	{
+		vector->push_back(parallaxBackground);
+		return;
+	}
+		
 
 	for (int i = 0; i < node->get_child_count(); i++)
 	{
 		GetParallaxBackgrounds(vector, node->get_child(i));
 	}
+}
+
+void TichSystem::OnPreSave()
+{
+	GetParallaxBackgrounds(&parallaxBackgrounds);
+	for (int i = 0; i < parallaxBackgrounds.size(); i++)
+	{
+		ParallaxBackground* parallaxBackground = parallaxBackgrounds.get(i);
+		for (int j = 0; j < parallaxBackground->get_child_count(); j++)
+		{
+			ParallaxLayer *parallaxLayer = (ParallaxLayer *)parallaxBackground->get_child(j);
+			parallaxLayer->pre_save();
+		}
+	}
+}
+
+void TichSystem::OnPostSave()
+{
+	for (int i = 0; i < parallaxBackgrounds.size(); i++)
+	{
+		ParallaxBackground* parallaxBackground = parallaxBackgrounds.get(i);
+		for (int j = 0; j < parallaxBackground->get_child_count(); j++)
+		{
+			ParallaxLayer* parallaxLayer = (ParallaxLayer*)parallaxBackground->get_child(j);
+			parallaxLayer->post_save();
+		}
+	}
+
+	parallaxBackgrounds.clear();
 }
 
 TichSystem *TichSystem::GetInstance()

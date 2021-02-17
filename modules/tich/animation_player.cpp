@@ -1715,8 +1715,6 @@ void AnimationPlayer::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(ANIMATION_METHOD_CALL_DEFERRED);
 	BIND_ENUM_CONSTANT(ANIMATION_METHOD_CALL_IMMEDIATE);
-
-	WARN_PRINT("AnimationPlayer");
 }
 
 AnimationPlayer::AnimationPlayer() {

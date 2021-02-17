@@ -1,5 +1,6 @@
 #include "TichSystem.h"
 
+#include "canvas_item.h"
 #include "scene_tree.h"
 #include "scene/2d/parallax_layer.h"
 #include "packed_scene.h"

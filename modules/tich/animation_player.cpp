@@ -1460,7 +1460,10 @@ void AnimationPlayer::set_autoplay(const String &p_name) {
 	autoplay = p_name;
 }
 
-String AnimationPlayer::get_autoplay() const {
+String AnimationPlayer::get_autoplay() const
+{
+	if (!Engine::get_singleton()->is_editor_hint())
+		return get_current_animation();
 
 	return autoplay;
 }

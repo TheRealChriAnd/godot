@@ -35,6 +35,8 @@
 #include "scene/scene_string_names.h"
 #include "servers/audio/audio_stream.h"
 
+#include "TichInfo.h"
+
 #ifdef TOOLS_ENABLED
 #include "editor/editor_settings.h"
 #include "scene/2d/skeleton_2d.h"
@@ -1462,7 +1464,7 @@ void AnimationPlayer::set_autoplay(const String &p_name) {
 
 String AnimationPlayer::get_autoplay() const
 {
-	if (!Engine::get_singleton()->is_editor_hint())
+	if (TichInfo::IsSaving())
 		return get_current_animation();
 
 	return autoplay;

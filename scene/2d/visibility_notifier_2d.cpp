@@ -31,12 +31,14 @@
 #include "visibility_notifier_2d.h"
 
 #include "core/engine.h"
-#include "particles_2d.h"
+#include "scene/2d/particles_2d.h"
 #include "scene/2d/animated_sprite.h"
 #include "scene/2d/physics_body_2d.h"
-#include "scene/animation/animation_player.h"
+#include "modules/tich/animation_player.h"
 #include "scene/main/viewport.h"
 #include "scene/scene_string_names.h"
+
+#include "modules/tich/TichInfo.h"
 
 #ifdef TOOLS_ENABLED
 Rect2 VisibilityNotifier2D::_edit_get_rect() const {
@@ -241,11 +243,26 @@ void VisibilityEnabler2D::_notification(int p_what) {
 		if (Engine::get_singleton()->is_editor_hint())
 			return;
 
-		Node *from = this;
-		//find where current scene starts
-		while (from->get_parent() && from->get_filename() == String())
-			from = from->get_parent();
+		Node* from = this;
 
+		if (!TichInfo::IsLoading())
+		{
+			//find where current scene starts
+			while (from->get_parent() && from->get_filename() == String())
+			{
+				parent_count++;
+				from = from->get_parent();
+			}
+		}
+		else
+		{
+			for (int i = 0; i < parent_count; i++)
+			{
+				from = from->get_parent();
+			}
+		}
+		
+	
 		_find_nodes(from);
 
 		// We need to defer the call of set_process and set_physics_process,
@@ -344,12 +361,17 @@ void VisibilityEnabler2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_enabler_enabled", "enabler"), &VisibilityEnabler2D::is_enabler_enabled);
 	ClassDB::bind_method(D_METHOD("_node_removed"), &VisibilityEnabler2D::_node_removed);
 
+	ClassDB::bind_method(D_METHOD("set_parent_count", "value"), &VisibilityEnabler2D::set_parent_count);
+	ClassDB::bind_method(D_METHOD("get_parent_count"), &VisibilityEnabler2D::get_parent_count);
+
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "pause_animations"), "set_enabler", "is_enabler_enabled", ENABLER_PAUSE_ANIMATIONS);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "freeze_bodies"), "set_enabler", "is_enabler_enabled", ENABLER_FREEZE_BODIES);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "pause_particles"), "set_enabler", "is_enabler_enabled", ENABLER_PAUSE_PARTICLES);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "pause_animated_sprites"), "set_enabler", "is_enabler_enabled", ENABLER_PAUSE_ANIMATED_SPRITES);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "process_parent"), "set_enabler", "is_enabler_enabled", ENABLER_PARENT_PROCESS);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "physics_process_parent"), "set_enabler", "is_enabler_enabled", ENABLER_PARENT_PHYSICS_PROCESS);
+
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "parent_count", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_parent_count", "get_parent_count");
 
 	BIND_ENUM_CONSTANT(ENABLER_PAUSE_ANIMATIONS);
 	BIND_ENUM_CONSTANT(ENABLER_FREEZE_BODIES);
@@ -378,5 +400,16 @@ VisibilityEnabler2D::VisibilityEnabler2D() {
 	enabler[ENABLER_PARENT_PROCESS] = false;
 	enabler[ENABLER_PARENT_PHYSICS_PROCESS] = false;
 
+	parent_count = 0;
 	visible = false;
+}
+
+void VisibilityEnabler2D::set_parent_count(int value)
+{
+	parent_count = value;
+}
+
+int VisibilityEnabler2D::get_parent_count() const
+{
+	return parent_count;
 }

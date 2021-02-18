@@ -506,6 +506,7 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 			{
 				if (!(usage & PROPERTY_USAGE_SCRIPT_VARIABLE))
 				{
+					//WARN_PRINT(String("Skipping Core: [" + E->get().name + "]"));
 					continue;
 				}
 
@@ -515,7 +516,7 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 				Node *node = value;
 				if (node)
 				{
-					WARN_PRINT(String("Skipping var: [" + E->get().name + "]"));
+					//WARN_PRINT(String("Skipping Node: [" + E->get().name + "]"));
 					continue;
 				}
 			}

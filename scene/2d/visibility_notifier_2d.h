@@ -107,6 +107,11 @@ public:
 	String get_configuration_warning() const;
 
 	VisibilityEnabler2D();
+
+private:
+	int parent_count;
+	void set_parent_count(int visible);
+	int get_parent_count() const;
 };
 
 VARIANT_ENUM_CAST(VisibilityEnabler2D::Enabler);

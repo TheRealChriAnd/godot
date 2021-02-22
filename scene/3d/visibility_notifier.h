@@ -94,6 +94,11 @@ public:
 	bool is_enabler_enabled(Enabler p_enabler) const;
 
 	VisibilityEnabler();
+
+private:
+	int parent_count;
+	void set_parent_count(int value);
+	int get_parent_count() const;
 };
 
 VARIANT_ENUM_CAST(VisibilityEnabler::Enabler);

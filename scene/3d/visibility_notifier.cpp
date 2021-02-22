@@ -36,6 +36,8 @@
 #include "scene/animation/animation_player.h"
 #include "scene/scene_string_names.h"
 
+#include "modules/tich/TichInfo.h"
+
 void VisibilityNotifier::_enter_camera(Camera *p_camera) {
 
 	ERR_FAIL_COND(cameras.has(p_camera));
@@ -190,9 +192,18 @@ void VisibilityEnabler::_notification(int p_what) {
 			return;
 
 		Node *from = this;
-		//find where current scene starts
-		while (from->get_parent() && from->get_filename() == String())
-			from = from->get_parent();
+
+		if (!TichInfo::IsLoading()) {
+			//find where current scene starts
+			while (from->get_parent() && from->get_filename() == String()) {
+				parent_count++;
+				from = from->get_parent();
+			}
+		} else {
+			for (int i = 0; i < parent_count; i++) {
+				from = from->get_parent();
+			}
+		}
 
 		_find_nodes(from);
 	}
@@ -247,8 +258,13 @@ void VisibilityEnabler::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_enabler_enabled", "enabler"), &VisibilityEnabler::is_enabler_enabled);
 	ClassDB::bind_method(D_METHOD("_node_removed"), &VisibilityEnabler::_node_removed);
 
+	ClassDB::bind_method(D_METHOD("set_parent_count", "value"), &VisibilityEnabler::set_parent_count);
+	ClassDB::bind_method(D_METHOD("get_parent_count"), &VisibilityEnabler::get_parent_count);
+
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "pause_animations"), "set_enabler", "is_enabler_enabled", ENABLER_PAUSE_ANIMATIONS);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "freeze_bodies"), "set_enabler", "is_enabler_enabled", ENABLER_FREEZE_BODIES);
+
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "parent_count", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_parent_count", "get_parent_count");
 
 	BIND_ENUM_CONSTANT(ENABLER_PAUSE_ANIMATIONS);
 	BIND_ENUM_CONSTANT(ENABLER_FREEZE_BODIES);
@@ -272,4 +288,13 @@ VisibilityEnabler::VisibilityEnabler() {
 		enabler[i] = true;
 
 	visible = false;
+	parent_count = 0;
+}
+
+void VisibilityEnabler::set_parent_count(int value) {
+	parent_count = value;
+}
+
+int VisibilityEnabler::get_parent_count() const {
+	return parent_count;
 }

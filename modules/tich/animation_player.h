@@ -32,7 +32,7 @@
 #define ANIMATION_PLAYER_H
 
 #include "node.h"
-#include "scene/2d/node_2d.h"
+#include "node_2d.h"
 #include "scene/3d/skeleton.h"
 #include "scene/3d/spatial.h"
 #include "scene/resources/animation.h"

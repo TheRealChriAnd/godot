@@ -155,8 +155,9 @@ void Node::_notification(int p_notification) {
 				}
 				else
 				{
-					get_script_instance()->call_multilevel_reversed("_tich_load", NULL, 0);
+					//get_script_instance()->call_multilevel_reversed("_tich_load", NULL, 0);
 				}
+				get_script_instance()->call_multilevel_reversed("_test_load", NULL, 0);
 			}
 
 		} break;

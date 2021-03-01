@@ -9,6 +9,7 @@
 #include "main/input_default.h"
 #include "core/os/keyboard.h"
 #include "scene/2d/parallax_background.h"
+#include "core/engine.h"
 
 //#define SAVE_FILE "res://saved.tich"
 #define SAVE_FILE "res://saved.tscn"
@@ -19,10 +20,15 @@ TichSystem::TichSystem()
 {
 	s_Instance = this;
 	currentTreeVersion = 1;
+	lastButtonStateF1 = false;
+	lastButtonStateF2 = false;
 }
 
 void TichSystem::Update(float dts)
 {
+	if (Engine::get_singleton()->is_editor_hint())
+		return;
+
 	InputDefault *input = (InputDefault *)Input::get_singleton();
 
 	bool buttonStateF1 = input->is_key_pressed(KeyList::KEY_F1);
@@ -66,7 +72,7 @@ void TichSystem::Save()
 	Ref<PackedScene> packedScene;
 	packedScene.instance();
 
-	Node* scene = SceneTree::get_singleton()->get_current_scene();
+	Node *scene = SceneTree::get_singleton()->get_root();
 	Error result = packedScene->pack(scene);
 
 	OnPostSave();
@@ -120,7 +126,7 @@ void TichSystem::OnReadyPost()
 
 void TichSystem::MakeSceneOwner()
 {
-	Node* scene = SceneTree::get_singleton()->get_current_scene();
+	Node* scene = SceneTree::get_singleton()->get_root();
 	if (scene)
 		SetOwnerRecursively(scene, scene);
 }
@@ -138,7 +144,7 @@ void TichSystem::GetParallaxBackgrounds(Vector<ParallaxBackground*>* vector, Nod
 {
 	if (!node)
 	{
-		node = SceneTree::get_singleton()->get_current_scene();
+		node = SceneTree::get_singleton()->get_root();
 		if (!node)
 			return;
 	}

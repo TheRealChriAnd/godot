@@ -74,6 +74,7 @@ public:
 	};
 
 	typedef Error (*ParseResourceFunc)(void *p_self, Stream *p_stream, Ref<Resource> &r_res, int &line, String &r_err_str);
+	typedef Error (*ParseVariantFunc)(void *p_self, Stream *p_stream, Variant& value, int &line, String &r_err_str);
 
 	struct ResourceParser {
 
@@ -81,6 +82,7 @@ public:
 		ParseResourceFunc func;
 		ParseResourceFunc ext_func;
 		ParseResourceFunc sub_func;
+		ParseVariantFunc tich_func;
 	};
 
 	enum TokenType {

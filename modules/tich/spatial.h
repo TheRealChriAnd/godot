@@ -31,8 +31,8 @@
 #ifndef SPATIAL_H
 #define SPATIAL_H
 
-#include "scene/main/node.h"
-#include "scene/main/scene_tree.h"
+#include "node.h"
+#include "scene_tree.h"
 
 class SpatialGizmo : public Reference {
 

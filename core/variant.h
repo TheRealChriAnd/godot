@@ -122,6 +122,8 @@ public:
 		POOL_VECTOR3_ARRAY, // 25
 		POOL_COLOR_ARRAY,
 
+		TICH_REF,
+
 		VARIANT_MAX
 
 	};
@@ -264,10 +266,10 @@ public:
 	Variant(uint64_t p_int);
 	Variant(float p_float);
 	Variant(double p_double);
-	Variant(const String &p_string);
+	Variant(const String &p_string, bool isTichRef = false);
 	Variant(const StringName &p_string);
-	Variant(const char *const p_cstring);
-	Variant(const CharType *p_wstring);
+	Variant(const char *const p_cstring, bool isTichRef = false);
+	Variant(const CharType *p_wstring, bool isTichRef = false);
 	Variant(const Vector2 &p_vector2);
 	Variant(const Rect2 &p_rect2);
 	Variant(const Vector3 &p_vector3);
@@ -278,7 +280,7 @@ public:
 	Variant(const Transform2D &p_transform);
 	Variant(const Transform &p_transform);
 	Variant(const Color &p_color);
-	Variant(const NodePath &p_node_path);
+	Variant(const NodePath &p_node_path, bool isTichRef = false);
 	Variant(const RefPtr &p_resource);
 	Variant(const RID &p_rid);
 	Variant(const Object *p_object);

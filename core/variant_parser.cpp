@@ -790,7 +790,7 @@ Error VariantParser::parse_value(Token &token, Variant &value, Stream *p_stream,
 					at_key = true;
 				}
 			}
-		} else if (id == "Resource" || id == "SubResource" || id == "ExtResource") {
+		} else if (id == "Resource" || id == "SubResource" || id == "ExtResource" || id == "TichRef") {
 
 			get_token(p_stream, token, line, r_err_str);
 			if (token.type != TK_PARENTHESIS_OPEN) {
@@ -822,6 +822,12 @@ Error VariantParser::parse_value(Token &token, Variant &value, Stream *p_stream,
 					return err;
 
 				value = res;
+			} else if (p_res_parser && id == "TichRef" && p_res_parser->tich_func) {
+
+				Error err = p_res_parser->tich_func(p_res_parser->userdata, p_stream, value, line, r_err_str);
+				if (err)
+					return err;
+				
 			} else {
 
 				get_token(p_stream, token, line, r_err_str);
@@ -1902,6 +1908,14 @@ Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_str
 				p_store_string_func(p_store_string_ud, rtosfix(ptr[i].r) + ", " + rtosfix(ptr[i].g) + ", " + rtosfix(ptr[i].b) + ", " + rtosfix(ptr[i].a));
 			}
 			p_store_string_func(p_store_string_ud, " )");
+
+		} break;
+		case Variant::TICH_REF: {
+
+			String str = p_variant;
+
+			str = "TichRef(\"" + str.c_escape() + "\")";
+			p_store_string_func(p_store_string_ud, str);
 
 		} break;
 		default: {

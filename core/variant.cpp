@@ -180,6 +180,11 @@ String Variant::get_type_name(Variant::Type p_type) {
 			return "PoolColorArray";
 
 		} break;
+		case TICH_REF: {
+
+			return "TichRef";
+
+		} break;
 		default: {
 		}
 	}
@@ -399,6 +404,16 @@ bool Variant::can_convert(Variant::Type p_type_from, Variant::Type p_type_to) {
 
 			static const Type valid[] = {
 				ARRAY,
+				NIL
+			};
+
+			valid_types = valid;
+
+		} break;
+		case TICH_REF: {
+
+			static const Type valid[] = {
+				STRING,
 				NIL
 			};
 
@@ -652,6 +667,16 @@ bool Variant::can_convert_strict(Variant::Type p_type_from, Variant::Type p_type
 			valid_types = valid;
 
 		} break;
+		case TICH_REF: {
+
+			static const Type valid[] = {
+				STRING,
+				NIL
+			};
+
+			valid_types = valid;
+
+		} break;
 		default: {
 		}
 	}
@@ -843,6 +868,11 @@ bool Variant::is_zero() const {
 		case POOL_COLOR_ARRAY: {
 
 			return reinterpret_cast<const PoolVector<Color> *>(_data._mem)->size() == 0;
+
+		} break;
+		case TICH_REF: {
+
+			return *reinterpret_cast<const String *>(_data._mem) == String();
 
 		} break;
 		default: {
@@ -1059,6 +1089,10 @@ void Variant::reference(const Variant &p_variant) {
 			memnew_placement(_data._mem, PoolVector<Color>(*reinterpret_cast<const PoolVector<Color> *>(p_variant._data._mem)));
 
 		} break;
+		case TICH_REF: {
+
+			memnew_placement(_data._mem, String(*reinterpret_cast<const String *>(p_variant._data._mem)));
+		} break;
 		default: {
 		}
 	}
@@ -1173,6 +1207,10 @@ void Variant::clear() {
 		case POOL_COLOR_ARRAY: {
 
 			reinterpret_cast<PoolVector<Color> *>(_data._mem)->~PoolVector<Color>();
+		} break;
+		case TICH_REF: {
+
+			reinterpret_cast<String *>(_data._mem)->~String();
 		} break;
 		default: {
 		} /* not needed */
@@ -1612,6 +1650,7 @@ String Variant::stringify(List<const void *> &stack) const {
 				return "[Object:null]";
 			}
 		} break;
+		case TICH_REF: return *reinterpret_cast<const String *>(_data._mem);
 		default: {
 			return "[" + get_type_name(type) + "]";
 		}
@@ -1744,6 +1783,8 @@ Variant::operator NodePath() const {
 	if (type == NODE_PATH)
 		return *reinterpret_cast<const NodePath *>(_data._mem);
 	else if (type == STRING)
+		return NodePath(operator String());
+	else if (type == TICH_REF)
 		return NodePath(operator String());
 	else
 		return NodePath();
@@ -2238,21 +2279,21 @@ Variant::Variant(const StringName &p_string) {
 	type = STRING;
 	memnew_placement(_data._mem, String(p_string.operator String()));
 }
-Variant::Variant(const String &p_string) {
+Variant::Variant(const String &p_string, bool isTichRef) {
 
-	type = STRING;
+	type = isTichRef ? TICH_REF : STRING;
 	memnew_placement(_data._mem, String(p_string));
 }
 
-Variant::Variant(const char *const p_cstring) {
+Variant::Variant(const char *const p_cstring, bool isTichRef) {
 
-	type = STRING;
+	type = isTichRef ? TICH_REF : STRING;
 	memnew_placement(_data._mem, String((const char *)p_cstring));
 }
 
-Variant::Variant(const CharType *p_wstring) {
+Variant::Variant(const CharType *p_wstring, bool isTichRef) {
 
-	type = STRING;
+	type = isTichRef ? TICH_REF : STRING;
 	memnew_placement(_data._mem, String(p_wstring));
 }
 Variant::Variant(const Vector3 &p_vector3) {
@@ -2310,10 +2351,15 @@ Variant::Variant(const Color &p_color) {
 	memnew_placement(_data._mem, Color(p_color));
 }
 
-Variant::Variant(const NodePath &p_node_path) {
+Variant::Variant(const NodePath &p_node_path, bool isTichRef) {
 
-	type = NODE_PATH;
-	memnew_placement(_data._mem, NodePath(p_node_path));
+	if (isTichRef) {
+		type = TICH_REF;
+		memnew_placement(_data._mem, String(p_node_path));
+	} else {
+		type = NODE_PATH;
+		memnew_placement(_data._mem, NodePath(p_node_path));
+	}
 }
 
 Variant::Variant(const RefPtr &p_resource) {
@@ -2711,6 +2757,10 @@ void Variant::operator=(const Variant &p_variant) {
 
 			*reinterpret_cast<PoolVector<Color> *>(_data._mem) = *reinterpret_cast<const PoolVector<Color> *>(p_variant._data._mem);
 		} break;
+		case TICH_REF: {
+
+			*reinterpret_cast<String *>(_data._mem) = *reinterpret_cast<const String *>(p_variant._data._mem);
+		} break;
 		default: {
 		}
 	}
@@ -2988,6 +3038,10 @@ uint32_t Variant::hash() const {
 			}
 
 			return hash;
+		} break;
+		case TICH_REF: {
+			const String* data = reinterpret_cast<const String *>(_data._mem);
+			return (String(*data) + "TICH_REF").hash();
 		} break;
 		default: {
 		}

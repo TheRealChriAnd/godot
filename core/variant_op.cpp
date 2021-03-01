@@ -236,6 +236,7 @@ bool Variant::booleanize() const {
 #define DEFAULT_OP_STR_REV(m_prefix, m_op_name, m_name, m_op, m_type)                                                                                   \
 	CASE_TYPE(m_prefix, m_op_name, m_name) {                                                                                                            \
 		if (p_b.type == STRING) _RETURN(*reinterpret_cast<const m_type *>(p_b._data._mem) m_op *reinterpret_cast<const String *>(p_a._data._mem));      \
+		if (p_b.type == TICH_REF) _RETURN(*reinterpret_cast<const m_type *>(p_b._data._mem) m_op *reinterpret_cast<const String *>(p_a._data._mem));      \
 		if (p_b.type == NODE_PATH) _RETURN(*reinterpret_cast<const m_type *>(p_b._data._mem) m_op *reinterpret_cast<const NodePath *>(p_a._data._mem)); \
                                                                                                                                                         \
 		_RETURN_FAIL                                                                                                                                    \
@@ -244,6 +245,7 @@ bool Variant::booleanize() const {
 #define DEFAULT_OP_STR(m_prefix, m_op_name, m_name, m_op, m_type)                                                                                       \
 	CASE_TYPE(m_prefix, m_op_name, m_name) {                                                                                                            \
 		if (p_b.type == STRING) _RETURN(*reinterpret_cast<const m_type *>(p_a._data._mem) m_op *reinterpret_cast<const String *>(p_b._data._mem));      \
+		if (p_b.type == TICH_REF) _RETURN(*reinterpret_cast<const m_type *>(p_a._data._mem) m_op *reinterpret_cast<const String *>(p_b._data._mem));      \
 		if (p_b.type == NODE_PATH) _RETURN(*reinterpret_cast<const m_type *>(p_a._data._mem) m_op *reinterpret_cast<const NodePath *>(p_b._data._mem)); \
                                                                                                                                                         \
 		_RETURN_FAIL                                                                                                                                    \
@@ -252,6 +254,7 @@ bool Variant::booleanize() const {
 #define DEFAULT_OP_STR_NULL(m_prefix, m_op_name, m_name, m_op, m_type)                                                                                  \
 	CASE_TYPE(m_prefix, m_op_name, m_name) {                                                                                                            \
 		if (p_b.type == STRING) _RETURN(*reinterpret_cast<const m_type *>(p_a._data._mem) m_op *reinterpret_cast<const String *>(p_b._data._mem));      \
+		if (p_b.type == TICH_REF) _RETURN(*reinterpret_cast<const m_type *>(p_a._data._mem) m_op *reinterpret_cast<const String *>(p_b._data._mem));      \
 		if (p_b.type == NODE_PATH) _RETURN(*reinterpret_cast<const m_type *>(p_a._data._mem) m_op *reinterpret_cast<const NodePath *>(p_b._data._mem)); \
 		if (p_b.type == NIL) _RETURN(!(p_b.type m_op NIL));                                                                                             \
                                                                                                                                                         \
@@ -461,6 +464,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			DEFAULT_OP_NUM_NULL(math, OP_EQUAL, INT, ==, _int);
 			DEFAULT_OP_NUM_NULL(math, OP_EQUAL, REAL, ==, _real);
 			DEFAULT_OP_STR_NULL(math, OP_EQUAL, STRING, ==, String);
+			DEFAULT_OP_STR_NULL(math, OP_EQUAL, TICH_REF, ==, String);
 			DEFAULT_OP_LOCALMEM_NULL(math, OP_EQUAL, VECTOR2, ==, Vector2);
 			DEFAULT_OP_LOCALMEM_NULL(math, OP_EQUAL, RECT2, ==, Rect2);
 			DEFAULT_OP_PTRREF_NULL(math, OP_EQUAL, TRANSFORM2D, ==, _transform2d);
@@ -551,6 +555,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			DEFAULT_OP_NUM_NULL(math, OP_NOT_EQUAL, INT, !=, _int);
 			DEFAULT_OP_NUM_NULL(math, OP_NOT_EQUAL, REAL, !=, _real);
 			DEFAULT_OP_STR_NULL(math, OP_NOT_EQUAL, STRING, !=, String);
+			DEFAULT_OP_STR_NULL(math, OP_NOT_EQUAL, TICH_REF, !=, String);
 			DEFAULT_OP_LOCALMEM_NULL(math, OP_NOT_EQUAL, VECTOR2, !=, Vector2);
 			DEFAULT_OP_LOCALMEM_NULL(math, OP_NOT_EQUAL, RECT2, !=, Rect2);
 			DEFAULT_OP_PTRREF_NULL(math, OP_NOT_EQUAL, TRANSFORM2D, !=, _transform2d);
@@ -615,6 +620,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			DEFAULT_OP_NUM(math, OP_LESS, INT, <, _int);
 			DEFAULT_OP_NUM(math, OP_LESS, REAL, <, _real);
 			DEFAULT_OP_STR(math, OP_LESS, STRING, <, String);
+			DEFAULT_OP_STR(math, OP_LESS, TICH_REF, <, String);
 			DEFAULT_OP_LOCALMEM(math, OP_LESS, VECTOR2, <, Vector2);
 			DEFAULT_OP_LOCALMEM(math, OP_LESS, VECTOR3, <, Vector3);
 			DEFAULT_OP_LOCALMEM(math, OP_LESS, _RID, <, RID);
@@ -650,6 +656,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			DEFAULT_OP_NUM(math, OP_LESS_EQUAL, INT, <=, _int);
 			DEFAULT_OP_NUM(math, OP_LESS_EQUAL, REAL, <=, _real);
 			DEFAULT_OP_STR(math, OP_LESS_EQUAL, STRING, <=, String);
+			DEFAULT_OP_STR(math, OP_LESS_EQUAL, TICH_REF, <=, String);
 			DEFAULT_OP_LOCALMEM(math, OP_LESS_EQUAL, VECTOR2, <=, Vector2);
 			DEFAULT_OP_LOCALMEM(math, OP_LESS_EQUAL, VECTOR3, <=, Vector3);
 			DEFAULT_OP_LOCALMEM(math, OP_LESS_EQUAL, _RID, <=, RID);
@@ -719,6 +726,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			DEFAULT_OP_NUM(math, OP_GREATER, INT, >, _int);
 			DEFAULT_OP_NUM(math, OP_GREATER, REAL, >, _real);
 			DEFAULT_OP_STR_REV(math, OP_GREATER, STRING, <, String);
+			DEFAULT_OP_STR_REV(math, OP_GREATER, TICH_REF, <, String);
 			DEFAULT_OP_LOCALMEM_REV(math, OP_GREATER, VECTOR2, <, Vector2);
 			DEFAULT_OP_LOCALMEM_REV(math, OP_GREATER, VECTOR3, <, Vector3);
 			DEFAULT_OP_LOCALMEM_REV(math, OP_GREATER, _RID, <, RID);
@@ -754,6 +762,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			DEFAULT_OP_NUM(math, OP_GREATER_EQUAL, INT, >=, _int);
 			DEFAULT_OP_NUM(math, OP_GREATER_EQUAL, REAL, >=, _real);
 			DEFAULT_OP_STR_REV(math, OP_GREATER_EQUAL, STRING, <=, String);
+			DEFAULT_OP_STR_REV(math, OP_GREATER_EQUAL, TICH_REF, <=, String);
 			DEFAULT_OP_LOCALMEM_REV(math, OP_GREATER_EQUAL, VECTOR2, <=, Vector2);
 			DEFAULT_OP_LOCALMEM_REV(math, OP_GREATER_EQUAL, VECTOR3, <=, Vector3);
 			DEFAULT_OP_LOCALMEM_REV(math, OP_GREATER_EQUAL, _RID, <=, RID);
@@ -802,6 +811,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			DEFAULT_OP_NUM(math, OP_ADD, INT, +, _int);
 			DEFAULT_OP_NUM(math, OP_ADD, REAL, +, _real);
 			DEFAULT_OP_STR(math, OP_ADD, STRING, +, String);
+			DEFAULT_OP_STR(math, OP_ADD, TICH_REF, +, String);
 			DEFAULT_OP_LOCALMEM(math, OP_ADD, VECTOR2, +, Vector2);
 			DEFAULT_OP_LOCALMEM(math, OP_ADD, VECTOR3, +, Vector3);
 			DEFAULT_OP_LOCALMEM(math, OP_ADD, QUAT, +, Quat);
@@ -841,6 +851,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			CASE_TYPE(math, OP_SUBTRACT, NIL)
 			CASE_TYPE(math, OP_SUBTRACT, BOOL)
 			CASE_TYPE(math, OP_SUBTRACT, STRING)
+			CASE_TYPE(math, OP_SUBTRACT, TICH_REF)
 			CASE_TYPE(math, OP_SUBTRACT, RECT2)
 			CASE_TYPE(math, OP_SUBTRACT, TRANSFORM2D)
 			CASE_TYPE(math, OP_SUBTRACT, PLANE)
@@ -923,6 +934,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			CASE_TYPE(math, OP_MULTIPLY, NIL)
 			CASE_TYPE(math, OP_MULTIPLY, BOOL)
 			CASE_TYPE(math, OP_MULTIPLY, STRING)
+			CASE_TYPE(math, OP_MULTIPLY, TICH_REF)
 			CASE_TYPE(math, OP_MULTIPLY, RECT2)
 			CASE_TYPE(math, OP_MULTIPLY, PLANE)
 			CASE_TYPE(math, OP_MULTIPLY, AABB)
@@ -963,6 +975,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			CASE_TYPE(math, OP_DIVIDE, NIL)
 			CASE_TYPE(math, OP_DIVIDE, BOOL)
 			CASE_TYPE(math, OP_DIVIDE, STRING)
+			CASE_TYPE(math, OP_DIVIDE, TICH_REF)
 			CASE_TYPE(math, OP_DIVIDE, RECT2)
 			CASE_TYPE(math, OP_DIVIDE, TRANSFORM2D)
 			CASE_TYPE(math, OP_DIVIDE, PLANE)
@@ -995,6 +1008,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			CASE_TYPE(math, OP_POSITIVE, NIL)
 			CASE_TYPE(math, OP_POSITIVE, BOOL)
 			CASE_TYPE(math, OP_POSITIVE, STRING)
+			CASE_TYPE(math, OP_POSITIVE, TICH_REF)
 			CASE_TYPE(math, OP_POSITIVE, RECT2)
 			CASE_TYPE(math, OP_POSITIVE, TRANSFORM2D)
 			CASE_TYPE(math, OP_POSITIVE, AABB)
@@ -1029,6 +1043,7 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			CASE_TYPE(math, OP_NEGATE, NIL)
 			CASE_TYPE(math, OP_NEGATE, BOOL)
 			CASE_TYPE(math, OP_NEGATE, STRING)
+			CASE_TYPE(math, OP_NEGATE, TICH_REF)
 			CASE_TYPE(math, OP_NEGATE, RECT2)
 			CASE_TYPE(math, OP_NEGATE, TRANSFORM2D)
 			CASE_TYPE(math, OP_NEGATE, AABB)
@@ -1063,6 +1078,25 @@ void Variant::evaluate(const Operator &p_op, const Variant &p_a,
 			}
 
 			CASE_TYPE(math, OP_MODULE, STRING) {
+				const String *format = reinterpret_cast<const String *>(p_a._data._mem);
+
+				String result;
+				bool error;
+				if (p_b.type == ARRAY) {
+					// e.g. "frog %s %d" % ["fish", 12]
+					const Array *args = reinterpret_cast<const Array *>(p_b._data._mem);
+					result = format->sprintf(*args, &error);
+				} else {
+					// e.g. "frog %d" % 12
+					Array args;
+					args.push_back(p_b);
+					result = format->sprintf(args, &error);
+				}
+				r_valid = !error;
+				_RETURN(result);
+			}
+
+			CASE_TYPE(math, OP_MODULE, TICH_REF) {
 				const String *format = reinterpret_cast<const String *>(p_a._data._mem);
 
 				String result;

@@ -227,6 +227,14 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 					{
 						tichRefNode.tichRefs.insert(name, value);
 					}
+					else if (value.get_type() == Variant::Type::ARRAY)
+					{
+						tichRefNode.tichRefs.insert(name, value);
+					}
+					else if (value.get_type() == Variant::Type::DICTIONARY)
+					{
+						tichRefNode.tichRefs.insert(name, value);
+					}
 
 					if (snames[nprops[j].name] == CoreStringNames::get_singleton()->_script) {
 						//work around to avoid old script variables from disappearing, should be the proper fix to:
@@ -404,9 +412,7 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 	}
 
 
-	String path;
 	Node *node = NULL;
-	Node *refrencedNode = NULL;
 
 	for (int i = 0; i < tichRefNodes.size(); i++)
 	{
@@ -415,42 +421,76 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 
 		for (Map<StringName, Variant>::Element *E = tichRefNode.tichRefs.front(); E; E = E->next())
 		{
-			path = E->get();
+			Variant value = E->get();
 
-			if (path.begins_with("_"))
+			if (value.get_type() == Variant::Type::ARRAY)
 			{
-				refrencedNode = NULL;
-				for (int j = 0; j < externalNodes.size(); j++)
+				Array arr = value;
+				for (int j = 0; j < arr.size(); j++)
 				{
-					if (externalNodes.get(j)->get_name() == path)
+					Variant& element = arr[j];
+					if (element.get_type() == Variant::Type::TICH_REF)
 					{
-						refrencedNode = externalNodes.get(j);
-						break;
+						injectTichRefProperty(element, element, externalNodes, ret_nodes[0]);
 					}
 				}
-				if (!refrencedNode)
+				node->set(E->key(), arr);
+			}
+			else if (value.get_type() == Variant::Type::DICTIONARY)
+			{
+				Dictionary dic = value;
+				for (int j = 0; j < dic.size(); j++)
 				{
-					ERR_PRINT("Failed to find TichRef " + path);
-					continue;
+					Variant &element = dic.get_value_at_index(j);
+					if (element.get_type() == Variant::Type::TICH_REF)
+					{
+						injectTichRefProperty(element, element, externalNodes, ret_nodes[0]);
+
+						dic[dic.get_key_at_index(j)] = element;
+					}
 				}
+				node->set(E->key(), dic);
 			}
 			else
 			{
-				refrencedNode = ret_nodes[0]->get_node_or_null(path);
-				if (refrencedNode == NULL && path.begins_with(ret_nodes[0]->get_name()))
-				{
-					path = path.replace_first(String(ret_nodes[0]->get_name()) + "/", "");
-					refrencedNode = ret_nodes[0]->get_node_or_null(path);
-				}
-
-				ERR_FAIL_COND_V_MSG(!refrencedNode, NULL, "TichRef Node not found: " + path + ".");
+				injectTichRefProperty(value, value, externalNodes, ret_nodes[0]);
+				node->set(E->key(), value);
 			}
-
-			node->set(E->key(), refrencedNode);
 		}
 	}
 
 	return ret_nodes[0];
+}
+
+void SceneState::injectTichRefProperty(Variant& retVariant, String path, const Vector<Node *> &externalNodes, const Node *root) const
+{
+	if (path.begins_with("_"))
+	{
+		for (int j = 0; j < externalNodes.size(); j++)
+		{
+			if (externalNodes.get(j)->get_name() == path)
+			{
+				retVariant = externalNodes.get(j);
+				return;
+			}
+		}
+		if (retVariant.get_type() == Variant::Type::NIL)
+		{
+			ERR_PRINT("Failed to find TichRef " + path);
+			return;
+		}
+	}
+	else
+	{
+		retVariant = root->get_node_or_null(path);
+		if (retVariant.get_type() == Variant::Type::NIL && path.begins_with(root->get_name()))
+		{
+			path = path.replace_first(String(root->get_name()) + "/", "");
+			retVariant = root->get_node_or_null(path);
+		}
+
+		ERR_FAIL_COND_MSG(retVariant.get_type() == Variant::Type::NIL, "TichRef Node not found: " + path + ".");
+	}
 }
 
 static int _nm_get_string(const String &p_string, Map<StringName, int> &name_map) {
@@ -586,16 +626,15 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Nam
 	Variant value;
 	String name;
 	bool isExternalNode;
-	const Node* gameRoot = p_node->get_tree()->get_root();
 
 	for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next())
 	{
-		if (!is_property_to_be_saved(p_node, E->get(), name, value, isExternalNode, gameRoot))
+		if (!is_property_to_be_saved(p_node, E->get(), name, value, isExternalNode))
 			continue;
 
 		if (isExternalNode)
 		{
-			Error err = _parse_external_node(value, name, value, externalNodes, gameRoot, name_map, variant_map, node_map);
+			Error err = _parse_external_node(value, name, value, externalNodes, name_map, variant_map, node_map);
 			if (err)
 				return err;
 		}
@@ -719,7 +758,7 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Nam
 	return OK;
 }
 
-bool SceneState::is_property_to_be_saved(Node *node, const PropertyInfo &propertyInfo, String &name, Variant &value, bool &isExternal, const Node *gameRoot)
+bool SceneState::is_property_to_be_saved(Node *node, const PropertyInfo &propertyInfo, String &name, Variant &value, bool &isExternal)
 {
 	isExternal = false;
 
@@ -739,19 +778,13 @@ bool SceneState::is_property_to_be_saved(Node *node, const PropertyInfo &propert
 			name = propertyInfo.name;
 			value = node->get(propertyInfo.name);
 
-			if (value.get_type() == Variant::Type::DICTIONARY)
+			if ((Node *)value)
 			{
-				WARN_PRINT("Skipping DICTIONARY");
-				return false;
-			}
-
-			Node *nodeValue = value;
-			if (nodeValue)
-			{
+				Node *nodeValue = value;
 				isExternal = !nodeValue->is_inside_tree();
 
 				if (!isExternal)
-					value = Variant(gameRoot->get_path_to(nodeValue), true);
+					value = Variant(nodeValue->get_path_tich_ref(), true);
 			}
 		}
 	}
@@ -851,7 +884,7 @@ bool SceneState::is_property_value_to_be_saved(List<PackState> &pack_state_stack
 	return true;
 }
 
-Error SceneState::_parse_external_node(Node *node, const String& varName, Variant& nodeValue, Set<Node *> &externalNodes, const Node *gameRoot, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map)
+Error SceneState::_parse_external_node(Node *node, const String& varName, Variant& nodeValue, Set<Node *> &externalNodes, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map)
 {
 	bool alreadySaved = externalNodes.has(node);
 	if (!alreadySaved)
@@ -880,12 +913,12 @@ Error SceneState::_parse_external_node(Node *node, const String& varName, Varian
 
 	for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next())
 	{
-		if (!is_property_to_be_saved(node, E->get(), name, value, isExternalNode, gameRoot))
+		if (!is_property_to_be_saved(node, E->get(), name, value, isExternalNode))
 			continue;
 
 		if (isExternalNode)
 		{
-			Error err = _parse_external_node(value, name, value, externalNodes, gameRoot, name_map, variant_map, node_map);
+			Error err = _parse_external_node(value, name, value, externalNodes, name_map, variant_map, node_map);
 			if (err)
 				return err;
 		}

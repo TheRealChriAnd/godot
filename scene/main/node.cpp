@@ -34,10 +34,13 @@
 #include "core/io/resource_loader.h"
 #include "core/message_queue.h"
 #include "core/print_string.h"
-#include "instance_placeholder.h"
-#include "scene/resources/packed_scene.h"
+#include "scene/main/instance_placeholder.h"
+#include "modules/tich/packed_scene.h"
 #include "scene/scene_string_names.h"
-#include "viewport.h"
+#include "scene/main/viewport.h"
+
+#include "modules/tich/TichInfo.h"
+#include "modules/tich/TichSystem.h"
 
 #ifdef TOOLS_ENABLED
 #include "editor/editor_settings.h"
@@ -114,12 +117,20 @@ void Node::_notification(int p_notification) {
 				memdelete(data.path_cache);
 				data.path_cache = NULL;
 			}
+			if (data.path_no_root_cache) {
+				memdelete(data.path_no_root_cache);
+				data.path_no_root_cache = NULL;
+			}
 		} break;
 		case NOTIFICATION_PATH_CHANGED: {
 
 			if (data.path_cache) {
 				memdelete(data.path_cache);
 				data.path_cache = NULL;
+			}
+			if (data.path_no_root_cache) {
+				memdelete(data.path_no_root_cache);
+				data.path_no_root_cache = NULL;
 			}
 		} break;
 		case NOTIFICATION_READY: {
@@ -146,7 +157,15 @@ void Node::_notification(int p_notification) {
 					set_physics_process(true);
 				}
 
-				get_script_instance()->call_multilevel_reversed(SceneStringNames::get_singleton()->_ready, NULL, 0);
+				if (!TichInfo::IsLoading())
+				{
+					get_script_instance()->call_multilevel_reversed(SceneStringNames::get_singleton()->_ready, NULL, 0);
+				}
+				else
+				{
+					//get_script_instance()->call_multilevel_reversed("_tich_load", NULL, 0);
+				}
+				get_script_instance()->call_multilevel_reversed("_test_load", NULL, 0);
 			}
 
 		} break;
@@ -1667,6 +1686,35 @@ NodePath Node::get_path() const {
 	return *data.path_cache;
 }
 
+void Node::create_path_no_root(String& string, bool first) const
+{
+	if(data.parent)
+		data.parent->create_path_no_root(string, false);
+	else
+		return;
+
+	string += get_name();
+
+	if(!first)
+		string += "/";
+}
+
+String Node::get_path_tich_ref() const
+{
+	if (!is_inside_tree())
+		return "_" + get_name();
+
+	if (data.path_no_root_cache)
+		return *data.path_no_root_cache;
+
+	String path;
+	create_path_no_root(path);
+
+	data.path_no_root_cache = memnew(String(path));
+
+	return *data.path_no_root_cache;
+}
+
 bool Node::is_in_group(const StringName &p_identifier) const {
 
 	return data.grouped.has(p_identifier);
@@ -2567,8 +2615,10 @@ void Node::_set_tree(SceneTree *p_tree) {
 	if (data.tree) {
 
 		_propagate_enter_tree();
-		if (!data.parent || data.parent->data.ready_notified) { // No parent (root) or parent ready
+		if (!data.parent || data.parent->data.ready_notified) // No parent (root) or parent ready
+		{
 			_propagate_ready(); //reverse_notification(NOTIFICATION_READY);
+			TichSystem::GetInstance()->OnReadyPost();
 		}
 
 		tree_changed_b = data.tree;
@@ -2965,6 +3015,7 @@ Node::Node() {
 	data.pause_owner = NULL;
 	data.network_master = 1; //server by default
 	data.path_cache = NULL;
+	data.path_no_root_cache = NULL;
 	data.parent_owned = false;
 	data.in_constructor = true;
 	data.viewport = NULL;

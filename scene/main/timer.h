@@ -42,6 +42,7 @@ class Timer : public Node {
 	bool autostart;
 	bool processing;
 	bool paused;
+	bool started;
 
 	double time_left;
 
@@ -81,6 +82,11 @@ public:
 private:
 	TimerProcessMode timer_process_mode;
 	void _set_process(bool p_process, bool p_force = false);
+
+	void set_has_started(bool p_started);
+	bool has_started() const;
+
+	void set_time_left(float p_time);
 };
 
 VARIANT_ENUM_CAST(Timer::TimerProcessMode);

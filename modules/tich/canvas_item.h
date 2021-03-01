@@ -31,8 +31,8 @@
 #ifndef CANVAS_ITEM_H
 #define CANVAS_ITEM_H
 
-#include "node.h"
-#include "scene_tree.h"
+#include "scene/main/node.h"
+#include "scene/main/scene_tree.h"
 #include "scene/resources/material.h"
 #include "scene/resources/multimesh.h"
 #include "scene/resources/shader.h"

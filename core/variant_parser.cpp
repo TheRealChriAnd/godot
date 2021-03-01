@@ -35,6 +35,8 @@
 #include "core/os/keyboard.h"
 #include "core/string_buffer.h"
 
+#include "scene/main/node.h"
+
 CharType VariantParser::StreamFile::get_char() {
 
 	return f->get_8();
@@ -1709,6 +1711,14 @@ Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_str
 					p_store_string_func(p_store_string_ud, res_text);
 					break;
 				}
+			}
+
+			if((Node*)p_variant)
+			{
+				Node* n = p_variant;
+
+				p_store_string_func(p_store_string_ud, "TichRef(\"" + n->get_path_tich_ref() + "\")");
+				break;
 			}
 
 			//store as generic object

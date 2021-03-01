@@ -37,7 +37,7 @@
 #include "core/object.h"
 #include "core/project_settings.h"
 #include "core/script_language.h"
-#include "scene/main/scene_tree.h"
+#include "scene_tree.h"
 
 class Viewport;
 class SceneState;
@@ -141,6 +141,7 @@ private:
 		bool display_folded;
 
 		mutable NodePath *path_cache;
+		mutable String *path_no_root_cache;
 
 	} data;
 
@@ -184,6 +185,8 @@ private:
 	Variant _rpc_unreliable_bind(const Variant **p_args, int p_argcount, Variant::CallError &r_error);
 	Variant _rpc_id_bind(const Variant **p_args, int p_argcount, Variant::CallError &r_error);
 	Variant _rpc_unreliable_id_bind(const Variant **p_args, int p_argcount, Variant::CallError &r_error);
+
+	void create_path_no_root(String& string, bool first = true) const;
 
 	friend class SceneTree;
 
@@ -288,6 +291,7 @@ public:
 	bool is_greater_than(const Node *p_node) const;
 
 	NodePath get_path() const;
+	String get_path_tich_ref() const;
 	NodePath get_path_to(const Node *p_node) const;
 	Node *find_common_parent_with(const Node *p_node) const;
 

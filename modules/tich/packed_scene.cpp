@@ -1216,15 +1216,6 @@ Error SceneState::pack(Node *p_scene) {
 		ERR_FAIL_V(err);
 	}
 
-
-
-	/*for (Set<Node*>::Element *E = nodesOutsideTree.front(); E; E = E->next())
-	{
-		Error err = _parse_external_node(E->get(), name_map, variant_map, node_map, nodepath_map);
-	}*/
-
-
-
 	err = _parse_connections(scene, scene, name_map, variant_map, node_map, nodepath_map);
 	if (err) {
 		clear();

@@ -33,6 +33,8 @@
 #include "core/os/os.h"
 #include "gdscript.h"
 #include "gdscript_functions.h"
+#include "core/object.h"
+
 
 Variant *GDScriptFunction::_get_variant(int p_address, GDScriptInstance *p_instance, GDScript *p_script, Variant &self, Variant *p_stack, String &r_error) const {
 
@@ -1078,6 +1080,9 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				}
 
 #endif
+				if (*methodname == "connect")
+					Object::buildConnectFromScript = true;
+
 				Variant::CallError err;
 				if (call_ret) {
 
@@ -1087,6 +1092,10 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 					base->call_ptr(*methodname, (const Variant **)argptrs, argc, NULL, err);
 				}
+
+				if (Object::buildConnectFromScript)
+					Object::buildConnectFromScript = false;
+
 #ifdef DEBUG_ENABLED
 				if (GDScriptLanguage::get_singleton()->profiling) {
 					function_call_time += OS::get_singleton()->get_ticks_usec() - call_time;

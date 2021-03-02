@@ -40,6 +40,8 @@
 #include "core/script_language.h"
 #include "core/translation.h"
 
+bool Object::buildConnectFromScript = false;
+
 #ifdef DEBUG_ENABLED
 
 struct _ObjectDebugLock {
@@ -1516,6 +1518,9 @@ Error Object::connect(const StringName &p_signal, Object *p_to_object, const Str
 		}
 	}
 
+	if (buildConnectFromScript)
+		p_flags |= CONNECT_PERSIST;
+
 	Signal::Slot slot;
 
 	Connection conn;
@@ -1531,7 +1536,7 @@ Error Object::connect(const StringName &p_signal, Object *p_to_object, const Str
 		slot.reference_count = 1;
 	}
 
-	s->slot_map[target] = slot;
+ 	s->slot_map[target] = slot;
 
 	return OK;
 }

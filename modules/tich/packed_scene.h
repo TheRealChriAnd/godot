@@ -99,8 +99,8 @@ class SceneState : public Reference {
 	Error _parse_node(Node *p_owner, Node *p_node, int p_parent_idx, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map, Map<Node *, int> &nodepath_map, Set<Node *> &externalNodes);
 	Error _parse_connections(Node *p_owner, Node *p_node, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map, Map<Node *, int> &nodepath_map);
 
-	Error _parse_external_node(Node *node, const String &varName, Variant &nodeValue, Set<Node *> &externalNodes, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map);
-	bool is_property_to_be_saved(Node *node, const PropertyInfo &propertyInfo, String &name, Variant &value, bool &isExternal);
+	Error _parse_external_node(Node *node, const String &varName, Variant &nodeValue, bool isWeakRef, Set<Node *> &externalNodes, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map);
+	bool is_property_to_be_saved(Node *node, const PropertyInfo &propertyInfo, String &name, Variant &value, bool &isExternal, bool &isWeakRef);
 	bool is_default_value(const StringName &type, Node *node, const Variant &value, const String &name);
 	bool is_property_value_to_be_saved(List<PackState>& pack_state_stack, const PropertyInfo &propertyInfo, const Variant &value, bool isDefault);
 

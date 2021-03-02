@@ -462,8 +462,15 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 	return ret_nodes[0];
 }
 
-void SceneState::injectTichRefProperty(Variant& retVariant, String path, const Vector<Node *> &externalNodes, const Node *root) const
-{
+void SceneState::injectTichRefProperty(Variant &retVariant, String path, const Vector<Node *> &externalNodes, const Node *root) const {
+	bool isWeakRef = false;
+
+	if (path.begins_with("#"))
+	{
+		isWeakRef = true;
+		path = path.substr(1);
+	}
+
 	if (path.begins_with("_"))
 	{
 		for (int j = 0; j < externalNodes.size(); j++)
@@ -471,7 +478,7 @@ void SceneState::injectTichRefProperty(Variant& retVariant, String path, const V
 			if (externalNodes.get(j)->get_name() == path)
 			{
 				retVariant = externalNodes.get(j);
-				return;
+				break;
 			}
 		}
 		if (retVariant.get_type() == Variant::Type::NIL)
@@ -480,7 +487,7 @@ void SceneState::injectTichRefProperty(Variant& retVariant, String path, const V
 			return;
 		}
 	}
-	else
+	else if (path != "null")
 	{
 		retVariant = root->get_node_or_null(path);
 		if (retVariant.get_type() == Variant::Type::NIL && path.begins_with(root->get_name()))
@@ -490,6 +497,17 @@ void SceneState::injectTichRefProperty(Variant& retVariant, String path, const V
 		}
 
 		ERR_FAIL_COND_MSG(retVariant.get_type() == Variant::Type::NIL, "TichRef Node not found: " + path + ".");
+	}
+	else
+	{
+		retVariant = Variant();
+	}
+
+	if (isWeakRef)
+	{
+		Ref<WeakRef> weakRef = memnew(WeakRef);
+		weakRef->set_obj(retVariant);
+		retVariant = weakRef;
 	}
 }
 
@@ -626,15 +644,16 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Nam
 	Variant value;
 	String name;
 	bool isExternalNode;
+	bool isWeakRef;
 
 	for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next())
 	{
-		if (!is_property_to_be_saved(p_node, E->get(), name, value, isExternalNode))
+		if (!is_property_to_be_saved(p_node, E->get(), name, value, isExternalNode, isWeakRef))
 			continue;
 
 		if (isExternalNode)
 		{
-			Error err = _parse_external_node(value, name, value, externalNodes, name_map, variant_map, node_map);
+			Error err = _parse_external_node(value, name, value, isWeakRef, externalNodes, name_map, variant_map, node_map);
 			if (err)
 				return err;
 		}
@@ -758,9 +777,10 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Nam
 	return OK;
 }
 
-bool SceneState::is_property_to_be_saved(Node *node, const PropertyInfo &propertyInfo, String &name, Variant &value, bool &isExternal)
+bool SceneState::is_property_to_be_saved(Node *node, const PropertyInfo &propertyInfo, String &name, Variant &value, bool &isExternal, bool& isWeakRef)
 {
 	isExternal = false;
+	isWeakRef = false;
 
 	if (!(propertyInfo.usage & PROPERTY_USAGE_STORAGE))
 	{
@@ -785,6 +805,31 @@ bool SceneState::is_property_to_be_saved(Node *node, const PropertyInfo &propert
 
 				if (!isExternal)
 					value = Variant(nodeValue->get_path_tich_ref(), true);
+			}
+			else
+			{
+				if (Object::cast_to<WeakRef>(value))
+				{
+					WeakRef *object = Object::cast_to<WeakRef>(value);
+					if (object)
+					{
+						Variant refValue = object->get_ref();
+						if ((Node*)refValue)
+						{
+							Node *nodeValue = refValue;
+							isWeakRef = true;
+							isExternal = !nodeValue->is_inside_tree();
+
+							if (!isExternal)
+								value = Variant("#" + nodeValue->get_path_tich_ref(), true);
+						}
+						else if (refValue.get_type() == Variant::Type::NIL)
+						{
+							isWeakRef = true;
+							value = Variant("#null", true);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -884,7 +929,7 @@ bool SceneState::is_property_value_to_be_saved(List<PackState> &pack_state_stack
 	return true;
 }
 
-Error SceneState::_parse_external_node(Node *node, const String& varName, Variant& nodeValue, Set<Node *> &externalNodes, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map)
+Error SceneState::_parse_external_node(Node *node, const String& varName, Variant& nodeValue, bool isWeakRef, Set<Node *> &externalNodes, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map)
 {
 	bool alreadySaved = externalNodes.has(node);
 	if (!alreadySaved)
@@ -894,7 +939,10 @@ Error SceneState::_parse_external_node(Node *node, const String& varName, Varian
 		node->set_name("_" + varName + "_" + itos(index));
 	}
 
-	nodeValue = Variant(node->get_name(), true);
+	if (isWeakRef)
+		nodeValue = Variant("#" + node->get_name(), true);
+	else
+		nodeValue = Variant(node->get_name(), true);
 
 	if (alreadySaved)
 		return OK;
@@ -913,12 +961,12 @@ Error SceneState::_parse_external_node(Node *node, const String& varName, Varian
 
 	for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next())
 	{
-		if (!is_property_to_be_saved(node, E->get(), name, value, isExternalNode))
+		if (!is_property_to_be_saved(node, E->get(), name, value, isWeakRef, isExternalNode))
 			continue;
 
 		if (isExternalNode)
 		{
-			Error err = _parse_external_node(value, name, value, externalNodes, name_map, variant_map, node_map);
+			Error err = _parse_external_node(value, name, value, isWeakRef, externalNodes, name_map, variant_map, node_map);
 			if (err)
 				return err;
 		}

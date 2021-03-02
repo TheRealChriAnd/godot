@@ -2618,7 +2618,6 @@ void Node::_set_tree(SceneTree *p_tree) {
 		if (!data.parent || data.parent->data.ready_notified) // No parent (root) or parent ready
 		{
 			_propagate_ready(); //reverse_notification(NOTIFICATION_READY);
-			TichSystem::GetInstance()->OnReadyPost();
 		}
 
 		tree_changed_b = data.tree;

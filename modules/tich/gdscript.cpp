@@ -1076,7 +1076,7 @@ bool GDScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
 			const Map<StringName, GDScript::MemberInfo>::Element *E = script->member_indices.find(p_name);
 			if (E) //Is it a member variable?
 			{
-				if (E->get().getter) //Does the member variable have a getter function?
+				if (E->get().getter && !TichInfo::IsSaving()) //Does the member variable have a getter function?
 				{
 					Variant::CallError err;
 					r_ret = const_cast<GDScriptInstance *>(this)->call(E->get().getter, NULL, 0, err); // Call the getter function

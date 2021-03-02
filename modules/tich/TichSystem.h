@@ -8,7 +8,7 @@ class ParallaxBackground;
 
 class TichSystem : public Reference
 {
-	friend class Node;
+	friend class SceneTree;
 
 public:
 	TichSystem();

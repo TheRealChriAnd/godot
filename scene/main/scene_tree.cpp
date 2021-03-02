@@ -1350,6 +1350,8 @@ void SceneTree::_change_scene(Node *p_to) {
 				}
 			}
 			memdelete(p_to);
+
+			TichSystem::GetInstance()->OnReadyPost();
 		}
 		else
 		{

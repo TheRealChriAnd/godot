@@ -122,6 +122,8 @@ void TichSystem::Load()
 void TichSystem::OnReadyPost()
 {
 	TichInfo::s_IsLoading = false;
+
+	MakeSceneOwner();
 }
 
 void TichSystem::MakeSceneOwner()

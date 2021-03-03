@@ -39,6 +39,8 @@
 #include "core/translation.h"
 #include "core/variant_parser.h"
 
+#include "modules/tich/TichInfo.h"
+
 Ref<ResourceFormatLoader> ResourceLoader::loader[ResourceLoader::MAX_LOADERS];
 
 int ResourceLoader::loader_count = 0;
@@ -416,7 +418,7 @@ RES ResourceLoader::load(const String &p_path, const String &p_type_hint, bool p
 #ifdef TOOLS_ENABLED
 
 	res->set_edited(false);
-	if (timestamp_on_load) {
+	if (timestamp_on_load && !TichInfo::IsLoading()) {
 		uint64_t mt = FileAccess::get_modified_time(path);
 		//printf("mt %s: %lli\n",remapped_path.utf8().get_data(),mt);
 		res->set_last_modified_time(mt);

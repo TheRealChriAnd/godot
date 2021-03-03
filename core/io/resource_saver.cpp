@@ -34,6 +34,8 @@
 #include "core/project_settings.h"
 #include "core/script_language.h"
 
+#include "modules/tich/TichInfo.h"
+
 Ref<ResourceFormatSaver> ResourceSaver::saver[MAX_SAVERS];
 
 int ResourceSaver::saver_count = 0;
@@ -123,7 +125,7 @@ Error ResourceSaver::save(const String &p_path, const RES &p_resource, uint32_t 
 #ifdef TOOLS_ENABLED
 
 			((Resource *)p_resource.ptr())->set_edited(false);
-			if (timestamp_on_save) {
+			if (timestamp_on_save && !TichInfo::IsSaving()) {
 				uint64_t mt = FileAccess::get_modified_time(p_path);
 
 				((Resource *)p_resource.ptr())->set_last_modified_time(mt);

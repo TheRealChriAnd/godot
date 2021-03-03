@@ -419,7 +419,8 @@ void VisualServerCanvas::canvas_item_set_transform(RID p_item, const Transform2D
 	Item *canvas_item = canvas_item_owner.getornull(p_item);
 	ERR_FAIL_COND(!canvas_item);
 
-	canvas_item->xform = p_transform;
+	if (canvas_item)
+		canvas_item->xform = p_transform;
 }
 void VisualServerCanvas::canvas_item_set_clip(RID p_item, bool p_clip) {
 

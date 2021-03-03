@@ -57,15 +57,13 @@ void TichSystem::Update(float dts)
 		MakeSceneOwner();
 
 		currentTreeVersion = SceneTree::get_singleton()->get_tree_version();
-
-		WARN_PRINT("TreeVersion Changed")
 	}
 }
 
 void TichSystem::Save()
 {
 	TichInfo::s_IsSaving = true;
-	WARN_PRINT("Saving");
+	//WARN_PRINT("Saving");
 
 	OnPreSave();
 
@@ -104,7 +102,7 @@ void TichSystem::Load()
 		return;
 
 	TichInfo::s_IsLoading = true;
-	WARN_PRINT("Loading");
+	//WARN_PRINT("Loading");
 
 	Error result = SceneTree::get_singleton()->change_scene(SAVE_FILE);
 

@@ -35,7 +35,7 @@
 #include "core/message_queue.h"
 #include "core/print_string.h"
 #include "scene/main/instance_placeholder.h"
-#include "modules/tich/packed_scene.h"
+#include "scene/resources/packed_scene.h"
 #include "scene/scene_string_names.h"
 #include "scene/main/viewport.h"
 

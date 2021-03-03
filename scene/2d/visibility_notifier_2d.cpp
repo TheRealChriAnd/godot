@@ -34,7 +34,7 @@
 #include "scene/2d/particles_2d.h"
 #include "scene/2d/animated_sprite.h"
 #include "scene/2d/physics_body_2d.h"
-#include "modules/tich/animation_player.h"
+#include "scene/animation/animation_player.h"
 #include "scene/main/viewport.h"
 #include "scene/scene_string_names.h"
 

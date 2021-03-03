@@ -1,9 +1,9 @@
 #include "TichSystem.h"
 
-#include "canvas_item.h"
+#include "scene/2d/canvas_item.h"
 #include "scene/main/scene_tree.h"
 #include "scene/2d/parallax_layer.h"
-#include "packed_scene.h"
+#include "scene/resources/packed_scene.h"
 #include "TichInfo.h"
 
 #include "main/input_default.h"

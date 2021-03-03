@@ -31,6 +31,7 @@
 #ifndef ANIMATION_PLAYER_H
 #define ANIMATION_PLAYER_H
 
+#include "scene/main/node.h"
 #include "scene/2d/node_2d.h"
 #include "scene/3d/skeleton.h"
 #include "scene/3d/spatial.h"
@@ -347,6 +348,7 @@ public:
 	void seek(float p_time, bool p_update = false);
 	void seek_delta(float p_time, float p_delta);
 	float get_current_animation_position() const;
+	void set_current_animation_position(float value);
 	float get_current_animation_length() const;
 
 	void advance(float p_time);

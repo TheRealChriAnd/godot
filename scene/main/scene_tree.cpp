@@ -44,7 +44,7 @@
 #include "scene/resources/dynamic_font.h"
 #include "scene/resources/material.h"
 #include "scene/resources/mesh.h"
-#include "modules/tich/packed_scene.h"
+#include "scene/resources/packed_scene.h"
 #include "scene/scene_string_names.h"
 #include "servers/physics_2d_server.h"
 #include "servers/physics_server.h"

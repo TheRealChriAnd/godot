@@ -31,11 +31,11 @@
 #ifndef RESOURCE_FORMAT_TEXT_H
 #define RESOURCE_FORMAT_TEXT_H
 
+#include "core/variant_parser.h"
 #include "core/io/resource_loader.h"
 #include "core/io/resource_saver.h"
 #include "core/os/file_access.h"
-#include "core/variant_parser.h"
-#include "scene/resources/packed_scene.h"
+#include "packed_scene.h"
 
 class ResourceInteractiveLoaderText : public ResourceInteractiveLoader {
 
@@ -75,9 +75,12 @@ class ResourceInteractiveLoaderText : public ResourceInteractiveLoader {
 
 	static Error _parse_sub_resources(void *p_self, VariantParser::Stream *p_stream, Ref<Resource> &r_res, int &line, String &r_err_str) { return reinterpret_cast<ResourceInteractiveLoaderText *>(p_self)->_parse_sub_resource(p_stream, r_res, line, r_err_str); }
 	static Error _parse_ext_resources(void *p_self, VariantParser::Stream *p_stream, Ref<Resource> &r_res, int &line, String &r_err_str) { return reinterpret_cast<ResourceInteractiveLoaderText *>(p_self)->_parse_ext_resource(p_stream, r_res, line, r_err_str); }
+	static Error _parse_tich_references(void *p_self, VariantParser::Stream *p_stream, Variant &value, int &line, String &r_err_str) { return reinterpret_cast<ResourceInteractiveLoaderText *>(p_self)->_parse_tich_reference(p_stream, value, line, r_err_str); }
+
 
 	Error _parse_sub_resource(VariantParser::Stream *p_stream, Ref<Resource> &r_res, int &line, String &r_err_str);
 	Error _parse_ext_resource(VariantParser::Stream *p_stream, Ref<Resource> &r_res, int &line, String &r_err_str);
+	Error _parse_tich_reference(VariantParser::Stream *p_stream, Variant &value, int &line, String &r_err_str);
 
 	// for converter
 	class DummyResource : public Resource {

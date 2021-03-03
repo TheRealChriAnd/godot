@@ -39,6 +39,8 @@
 #include "core/project_settings.h"
 #include "gdscript_compiler.h"
 
+#include "modules/tich/TichInfo.h"
+
 ///////////////////////////
 
 GDScriptNativeClass::GDScriptNativeClass(const StringName &p_name) {
@@ -111,7 +113,10 @@ GDScriptInstance *GDScript::_create_instance(const Variant **p_args, int p_argco
 	GDScriptLanguage::singleton->lock->unlock();
 #endif
 
-	initializer->call(instance, p_args, p_argcount, r_error);
+	if (!TichInfo::IsLoading())
+		initializer->call(instance, p_args, p_argcount, r_error);
+	else
+		r_error.error = Variant::CallError::CALL_OK;
 
 	if (r_error.error != Variant::CallError::CALL_OK) {
 		instance->script = Ref<GDScript>();
@@ -1011,7 +1016,7 @@ bool GDScriptInstance::set(const StringName &p_name, const Variant &p_value) {
 		const Map<StringName, GDScript::MemberInfo>::Element *E = script->member_indices.find(p_name);
 		if (E) {
 			const GDScript::MemberInfo *member = &E->get();
-			if (member->setter) {
+			if (member->setter && !TichInfo::IsLoading()) {
 				const Variant *val = &p_value;
 				Variant::CallError err;
 				call(member->setter, &val, 1, err);
@@ -1071,7 +1076,7 @@ bool GDScriptInstance::get(const StringName &p_name, Variant &r_ret) const {
 			const Map<StringName, GDScript::MemberInfo>::Element *E = script->member_indices.find(p_name);
 			if (E) //Is it a member variable?
 			{
-				if (E->get().getter) //Does the member variable have a getter function?
+				if (E->get().getter && !TichInfo::IsSaving()) //Does the member variable have a getter function?
 				{
 					Variant::CallError err;
 					r_ret = const_cast<GDScriptInstance *>(this)->call(E->get().getter, NULL, 0, err); // Call the getter function

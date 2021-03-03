@@ -35,6 +35,8 @@
 #include "scene/scene_string_names.h"
 #include "servers/audio/audio_stream.h"
 
+#include "modules/tich/TichInfo.h"
+
 #ifdef TOOLS_ENABLED
 #include "editor/editor_settings.h"
 #include "scene/2d/skeleton_2d.h"
@@ -1207,7 +1209,10 @@ void AnimationPlayer::play(const StringName &p_name, float p_custom_blend, float
 	c.current.from = &animation_set[name];
 
 	if (c.assigned != name) { // reset
-		c.current.pos = p_from_end ? c.current.from->animation->get_length() : 0;
+		if (!(c.assigned == ""))
+		{
+			c.current.pos = p_from_end ? c.current.from->animation->get_length() : 0;
+		}	
 	} else {
 		if (p_from_end && c.current.pos == 0) {
 			// Animation reset BUT played backwards, set position to the end
@@ -1362,8 +1367,13 @@ bool AnimationPlayer::is_valid() const {
 
 float AnimationPlayer::get_current_animation_position() const {
 
-	ERR_FAIL_COND_V(!playback.current.from, 0);
+	//ERR_FAIL_COND_V(!playback.current.from, 0);
 	return playback.current.pos;
+}
+
+void AnimationPlayer::set_current_animation_position(float value)
+{
+	playback.current.pos = value;
 }
 
 float AnimationPlayer::get_current_animation_length() const {
@@ -1452,7 +1462,10 @@ void AnimationPlayer::set_autoplay(const String &p_name) {
 	autoplay = p_name;
 }
 
-String AnimationPlayer::get_autoplay() const {
+String AnimationPlayer::get_autoplay() const
+{
+	if (TichInfo::IsSaving())
+		return get_current_animation();
 
 	return autoplay;
 }
@@ -1676,6 +1689,7 @@ void AnimationPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_method_call_mode"), &AnimationPlayer::get_method_call_mode);
 
 	ClassDB::bind_method(D_METHOD("get_current_animation_position"), &AnimationPlayer::get_current_animation_position);
+	ClassDB::bind_method(D_METHOD("set_current_animation_position"), &AnimationPlayer::set_current_animation_position);
 	ClassDB::bind_method(D_METHOD("get_current_animation_length"), &AnimationPlayer::get_current_animation_length);
 
 	ClassDB::bind_method(D_METHOD("seek", "seconds", "update"), &AnimationPlayer::seek, DEFVAL(false));
@@ -1686,7 +1700,7 @@ void AnimationPlayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "assigned_animation", PROPERTY_HINT_NONE, "", 0), "set_assigned_animation", "get_assigned_animation");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "autoplay", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_autoplay", "get_autoplay");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "current_animation_length", PROPERTY_HINT_NONE, "", 0), "", "get_current_animation_length");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "current_animation_position", PROPERTY_HINT_NONE, "", 0), "", "get_current_animation_position");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "current_animation_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_current_animation_position", "get_current_animation_position");
 
 	ADD_GROUP("Playback Options", "playback_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "playback_process_mode", PROPERTY_HINT_ENUM, "Physics,Idle,Manual"), "set_animation_process_mode", "get_animation_process_mode");

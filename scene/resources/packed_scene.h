@@ -34,6 +34,10 @@
 #include "core/resource.h"
 #include "scene/main/node.h"
 
+typedef Map<Node *, int> NodeMap;
+typedef Map<StringName, int> NameMap;
+typedef HashMap<Variant, int, VariantHasher, VariantComparator> VariantMap;
+
 class SceneState : public Reference {
 
 	GDCLASS(SceneState, Reference);
@@ -92,8 +96,13 @@ class SceneState : public Reference {
 
 	Vector<ConnectionData> connections;
 
-	Error _parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map<StringName, int> &name_map, HashMap<Variant, int, VariantHasher, VariantComparator> &variant_map, Map<Node *, int> &node_map, Map<Node *, int> &nodepath_map);
-	Error _parse_connections(Node *p_owner, Node *p_node, Map<StringName, int> &name_map, HashMap<Variant, int, VariantHasher, VariantComparator> &variant_map, Map<Node *, int> &node_map, Map<Node *, int> &nodepath_map);
+	Error _parse_node(Node *p_owner, Node *p_node, int p_parent_idx, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map, Map<Node *, int> &nodepath_map, Set<Node *> &externalNodes);
+	Error _parse_connections(Node *p_owner, Node *p_node, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map, Map<Node *, int> &nodepath_map);
+
+	Error _parse_external_node(Node *node, const String &varName, Variant &nodeValue, bool isWeakRef, Set<Node *> &externalNodes, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map);
+	bool is_property_to_be_saved(Node *node, const PropertyInfo &propertyInfo, String &name, Variant &value, bool &isExternal, bool &isWeakRef);
+	bool is_default_value(const StringName &type, Node *node, const Variant &value, const String &name);
+	bool is_property_value_to_be_saved(List<PackState>& pack_state_stack, const PropertyInfo &propertyInfo, const Variant &value, bool isDefault);
 
 	String path;
 
@@ -106,6 +115,8 @@ class SceneState : public Reference {
 	PoolVector<String> _get_node_groups(int p_idx) const;
 
 	int _find_base_scene_node_remap_key(int p_idx) const;
+
+	void injectTichRefProperty(Variant &retVariant, String path, const Vector<Node *> &externalNodes, const Node *root) const;
 
 protected:
 	static void _bind_methods();

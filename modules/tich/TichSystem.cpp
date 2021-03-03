@@ -11,8 +11,8 @@
 #include "scene/2d/parallax_background.h"
 #include "core/engine.h"
 
-//#define SAVE_FILE "res://saved.tich"
-#define SAVE_FILE "res://saved.tscn"
+#define SAVE_FILE "res://saved.tich"
+//#define SAVE_FILE "res://saved.tscn"
 
 TichSystem* TichSystem::s_Instance = nullptr;
 

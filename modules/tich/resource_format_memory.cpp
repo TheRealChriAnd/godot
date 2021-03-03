@@ -37,6 +37,8 @@
 #include "core/project_settings.h"
 #include "core/version.h"
 
+#include "scene/main/node.h"
+
 #include "core/io/file_access_memory.h"
 
 //#define print_bl(m_what) print_line(m_what)
@@ -75,6 +77,7 @@ enum {
 	VARIANT_VECTOR2_ARRAY = 37,
 	VARIANT_INT64 = 40,
 	VARIANT_DOUBLE = 41,
+	VARIANT_TICH_REF = 42,
 #ifndef DISABLE_DEPRECATED
 	VARIANT_IMAGE = 21, // - no longer variant type
 	IMAGE_ENCODING_EMPTY = 0,
@@ -156,6 +159,10 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v) {
 		case VARIANT_STRING: {
 
 			r_v = get_unicode_string();
+		} break;
+		case VARIANT_TICH_REF: {
+
+			r_v = Variant(get_unicode_string(), true);
 		} break;
 		case VARIANT_VECTOR2: {
 
@@ -1338,6 +1345,13 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 			save_unicode_string(f, val);
 
 		} break;
+		case Variant::TICH_REF: {
+
+			f->store_32(VARIANT_TICH_REF);
+			String val = p_property;
+			save_unicode_string(f, val);
+
+		} break;
 		case Variant::VECTOR2: {
 
 			f->store_32(VARIANT_VECTOR2);
@@ -1485,6 +1499,15 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 			f->store_32(val.get_id());
 		} break;
 		case Variant::OBJECT: {
+
+			if((Node*)p_property)
+			{
+				f->store_32(VARIANT_TICH_REF);
+				Node* node = p_property;
+				String val = node->get_path_tich_ref();
+				save_unicode_string(f, val);
+				return;
+			}
 
 			f->store_32(VARIANT_OBJECT);
 			RES res = p_property;

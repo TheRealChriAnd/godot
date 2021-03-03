@@ -64,10 +64,8 @@ void operator delete(void *p_mem, void *p_pointer, size_t check, const char *p_d
 }
 #endif
 
-#ifdef DEBUG_ENABLED
 uint64_t Memory::mem_usage = 0;
 uint64_t Memory::max_usage = 0;
-#endif
 
 uint64_t Memory::alloc_count = 0;
 
@@ -91,10 +89,9 @@ void *Memory::alloc_static(size_t p_bytes, bool p_pad_align) {
 
 		uint8_t *s8 = (uint8_t *)mem;
 
-#ifdef DEBUG_ENABLED
 		atomic_add(&mem_usage, p_bytes);
 		atomic_exchange_if_greater(&max_usage, mem_usage);
-#endif
+
 		return s8 + PAD_ALIGN;
 	} else {
 		return mem;
@@ -119,14 +116,12 @@ void *Memory::realloc_static(void *p_memory, size_t p_bytes, bool p_pad_align) {
 		mem -= PAD_ALIGN;
 		uint64_t *s = (uint64_t *)mem;
 
-#ifdef DEBUG_ENABLED
 		if (p_bytes > *s) {
 			atomic_add(&mem_usage, p_bytes - *s);
 			atomic_exchange_if_greater(&max_usage, mem_usage);
 		} else {
 			atomic_sub(&mem_usage, *s - p_bytes);
 		}
-#endif
 
 		if (p_bytes == 0) {
 			free(mem);
@@ -188,19 +183,11 @@ uint64_t Memory::get_mem_available() {
 }
 
 uint64_t Memory::get_mem_usage() {
-#ifdef DEBUG_ENABLED
 	return mem_usage;
-#else
-	return 0;
-#endif
 }
 
 uint64_t Memory::get_mem_max_usage() {
-#ifdef DEBUG_ENABLED
 	return max_usage;
-#else
-	return 0;
-#endif
 }
 
 _GlobalNil::_GlobalNil() {

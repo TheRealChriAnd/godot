@@ -11,6 +11,9 @@
 #include "scene/2d/parallax_background.h"
 #include "core/engine.h"
 
+#include "core/os/os.h"
+#include "main/Performance.h"
+
 #define SAVE_FILE "res://saved.tich"
 //#define SAVE_FILE "res://saved.tscn"
 
@@ -24,7 +27,7 @@ TichSystem::TichSystem()
 	lastButtonStateF2 = false;
 }
 
-void TichSystem::Update(float dts)
+void TichSystem::Update(uint64_t frameTime)
 {
 	if (Engine::get_singleton()->is_editor_hint())
 		return;
@@ -38,14 +41,31 @@ void TichSystem::Update(float dts)
 	{
 		if (!lastButtonStateF1)
 		{
-			Save();
+			OS* os = OS::get_singleton();
+			uint64_t time = os->get_ticks_usec();
+			if (Save())
+			{
+				time = os->get_ticks_usec() - time;
+				os->print("Save Time %llu\n", time);
+				os->print("Memory %llu\n", Memory::get_mem_usage());
+				os->print("Frame Time %llu\n", frameTime);
+				//os->print("Memory %f\n", Performance::get_singleton()->get_monitor(Performance::Monitor::MEMORY_DYNAMIC));
+			}
 		}	
 	}
 	else if (buttonStateF2)
 	{
 		if (!lastButtonStateF2)
 		{
-			Load();
+			OS *os = OS::get_singleton();
+			uint64_t time = os->get_ticks_usec();
+			if(Load())
+			{
+				time = os->get_ticks_usec() - time;
+				os->print("Load Time %llu\n", time);
+				os->print("Memory %llu\n", Memory::get_mem_usage());
+				os->print("Frame Time %llu\n", frameTime);
+			}
 		}	
 	}
 
@@ -60,8 +80,11 @@ void TichSystem::Update(float dts)
 	}
 }
 
-void TichSystem::Save()
+bool TichSystem::Save()
 {
+	if (TichInfo::s_IsLoading)
+		return false;
+
 	TichInfo::s_IsSaving = true;
 	//WARN_PRINT("Saving");
 
@@ -79,7 +102,7 @@ void TichSystem::Save()
 	{
 		ERR_PRINT("Failed to pack scene, Error: " + result);
 		TichInfo::s_IsSaving = false;
-		return;
+		return false;
 	}
 
 	result = ResourceSaver::save(SAVE_FILE, packedScene);
@@ -88,18 +111,19 @@ void TichSystem::Save()
 	{
 		ERR_PRINT("Failed to save scene, Error: " + result);
 		TichInfo::s_IsSaving = false;
-		return;
+		return false;
 	}
 
-	WARN_PRINT("Scene Saved Successfully");
+	//WARN_PRINT("Scene Saved Successfully");
 
 	TichInfo::s_IsSaving = false;
+	return true;
 }
 
-void TichSystem::Load()
+bool TichSystem::Load()
 {
 	if (TichInfo::s_IsLoading)
-		return;
+		return false;
 
 	TichInfo::s_IsLoading = true;
 	//WARN_PRINT("Loading");
@@ -111,10 +135,11 @@ void TichSystem::Load()
 	if (result != Error::OK)
 	{
 		ERR_PRINT("Failed to load scene, Error: " + result);
-		return;
+		return false;
 	}
 
-	WARN_PRINT("Scene Loaded Successfully");
+	//WARN_PRINT("Scene Loaded Successfully");
+	return true;
 }
 
 void TichSystem::OnReadyPost()

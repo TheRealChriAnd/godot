@@ -491,8 +491,6 @@ bool SceneTree::iteration(float p_time) {
 	_flush_delete_queue();
 	_call_idle_callbacks();
 
-	TichSystem::GetInstance()->Update(p_time);
-
 	return _quit;
 }
 

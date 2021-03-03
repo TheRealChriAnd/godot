@@ -41,6 +41,8 @@
 #include "servers/visual/visual_server_raster.h"
 #include "servers/visual_server.h"
 
+#include "modules/tich/TichInfo.h"
+
 Mutex *CanvasItemMaterial::material_mutex = NULL;
 SelfList<CanvasItemMaterial>::List *CanvasItemMaterial::dirty_materials = NULL;
 Map<CanvasItemMaterial::MaterialKey, CanvasItemMaterial::ShaderData> CanvasItemMaterial::shader_map;
@@ -965,6 +967,9 @@ void CanvasItem::_notify_transform(CanvasItem *p_node) {
 				get_tree()->xform_change_list.add(&p_node->xform_change);
 		}
 	}
+
+	if (TichInfo::IsSaving())
+		return;
 
 	for (List<CanvasItem *>::Element *E = p_node->children_items.front(); E; E = E->next()) {
 

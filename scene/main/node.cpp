@@ -149,16 +149,18 @@ void Node::_notification(int p_notification) {
 					set_process_unhandled_key_input(true);
 				}
 
-				if (get_script_instance()->has_method(SceneStringNames::get_singleton()->_process)) {
-					set_process(true);
-				}
-
-				if (get_script_instance()->has_method(SceneStringNames::get_singleton()->_physics_process)) {
-					set_physics_process(true);
-				}
-
 				if (!TichInfo::IsLoading())
 				{
+					if (get_script_instance()->has_method(SceneStringNames::get_singleton()->_process))
+					{
+						set_process(true);
+					}
+
+					if (get_script_instance()->has_method(SceneStringNames::get_singleton()->_physics_process))
+					{
+						set_physics_process(true);
+					}
+
 					get_script_instance()->call_multilevel_reversed(SceneStringNames::get_singleton()->_ready, NULL, 0);
 				}
 				else
@@ -2968,6 +2970,8 @@ void Node::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "multiplayer", PROPERTY_HINT_RESOURCE_TYPE, "MultiplayerAPI", 0), "", "get_multiplayer");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "custom_multiplayer", PROPERTY_HINT_RESOURCE_TYPE, "MultiplayerAPI", 0), "set_custom_multiplayer", "get_custom_multiplayer");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "process_priority"), "set_process_priority", "get_process_priority");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "physics_process", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_physics_process", "is_physics_processing");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "process", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_process", "is_processing");
 
 	BIND_VMETHOD(MethodInfo("_process", PropertyInfo(Variant::REAL, "delta")));
 	BIND_VMETHOD(MethodInfo("_physics_process", PropertyInfo(Variant::REAL, "delta")));

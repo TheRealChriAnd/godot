@@ -1080,7 +1080,7 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 				}
 
 #endif
-				if (*methodname == "connect")
+				if (*methodname == "connect" && !Engine::get_singleton()->is_editor_hint())
 					Object::buildConnectFromScript = true;
 
 				Variant::CallError err;

@@ -29,12 +29,6 @@ void TichProfiler::Update(uint64_t frameTime)
 
 		Performance *perf = Performance::get_singleton();
 
-		data.frameTime = frameTime;
-		data.memory = Memory::get_mem_usage();
-		data.nodes = perf->get_monitor(Performance::Monitor::OBJECT_NODE_COUNT);
-		data.objects = perf->get_monitor(Performance::Monitor::OBJECT_COUNT);
-		data.stateSize = ResourceFormatSaverMemory::get_singleton()->get_state_size();
-
 		if ((sample % executionInterval) == 0)
 		{
 			OS *os = OS::get_singleton();
@@ -61,6 +55,12 @@ void TichProfiler::Update(uint64_t frameTime)
 		{
 			data.executionTime = 0;
 		}
+
+		data.frameTime	= frameTime;
+		data.memory		= Memory::get_mem_usage();
+		data.nodes		= perf->get_monitor(Performance::Monitor::OBJECT_NODE_COUNT);
+		data.objects	= perf->get_monitor(Performance::Monitor::OBJECT_COUNT);
+		data.stateSize	= ResourceFormatSaverMemory::get_singleton()->get_state_size();
 
 		profilingData.push_back(data);
 

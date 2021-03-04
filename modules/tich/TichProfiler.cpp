@@ -1,6 +1,8 @@
 #include "TichProfiler.h"
 
 #include "TichSystem.h"
+#include "TichInfo.h"
+#include "core/os/os.h"
 
 #include "resource_format_memory.h"
 
@@ -8,6 +10,7 @@ TichProfiler *TichProfiler::singleton = NULL;
 
 TichProfiler::TichProfiler() :
 	profilingData(),
+	timeStamp(0),
 	sample(0),
 	executionInterval(0),
 	save(false),
@@ -44,9 +47,17 @@ void TichProfiler::Update(uint64_t frameTime)
 			else
 			{
 				if (save)
+				{
+					TichInfo::s_IsSaving = true;
 					emit_signal("_save");
+					TichInfo::s_IsSaving = false;
+				}
 				else
+				{
+					TichInfo::s_IsLoading = true;
 					emit_signal("_load");
+					TichInfo::s_IsLoading = false;
+				}	
 			}
 
 			data.executionTime = os->get_ticks_usec() - time;
@@ -87,6 +98,9 @@ void TichProfiler::Update(uint64_t frameTime)
 
 			file->close();
 			memdelete(file);
+
+			OS *os = OS::get_singleton();
+			os->print("Profiling finished in %f s\n", (os->get_ticks_usec() - timeStamp) / 1000.0F / 1000.0F);
 		}
 	}
 }
@@ -100,6 +114,14 @@ void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, bool save
 	this->dataPath = "data_" + String(gaImplementation ? "ga" : "gs") + "_" + String(save ? "save" : "load") + ".csv";
 
 	profilingData.clear();
+
+	OS *os = OS::get_singleton();
+	timeStamp = os->get_ticks_usec();
+	os->print("Profiling started [Samples: %llu, Interval: %llu, Implementation: %s, Mode: %s]\n",
+		samples,
+		executionInterval,
+		(gaImplementation ? "GA" : "GS"),
+		(save ? "Save" : "Load"));
 }
 
 void TichProfiler::StartGs(uint64_t samples, uint16_t executionInterval, bool save)

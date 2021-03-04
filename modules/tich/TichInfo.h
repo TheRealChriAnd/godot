@@ -4,6 +4,7 @@
 class TichInfo
 {
 	friend class TichSystem;
+	friend class TichProfiler;
 
 public:
 	static bool IsSaving();

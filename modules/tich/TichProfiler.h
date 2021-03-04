@@ -29,6 +29,7 @@ private:
 private:
 
 	Vector<ProfilerData> profilingData;
+	uint64_t timeStamp;
 	uint64_t sample;
 	uint16_t executionInterval;
 	String dataPath;

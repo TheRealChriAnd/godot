@@ -1772,7 +1772,7 @@ int ResourceFormatSaverMemoryInstance::get_string_index(const String &p_string) 
 	return strings.size() - 1;
 }
 
-Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p_resource, uint32_t p_flags) {
+Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p_resource, uint64_t &bytesWritten, uint32_t p_flags) {
 
 	Error err;
 	if (p_flags & ResourceSaver::FLAG_COMPRESS) {
@@ -1981,15 +1981,13 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 		f->store_64(ofs_table[i]);
 	}
 
-	f->seek_end();
-
-	f->store_buffer((const uint8_t *)"RSRC", 4); //magic at end
-
 	if (f->get_error() != OK && f->get_error() != ERR_FILE_EOF) {
 		f->close();
 		memdelete(f);
 		return ERR_CANT_CREATE;
 	}
+
+	bytesWritten = f->get_position();
 
 	f->close();
 	memdelete(f);
@@ -2001,7 +1999,7 @@ Error ResourceFormatSaverMemory::save(const String &p_path, const RES &p_resourc
 
 	String local_path = ProjectSettings::get_singleton()->localize_path(p_path);
 	ResourceFormatSaverMemoryInstance saver;
-	return saver.save(local_path, p_resource, p_flags);
+	return saver.save(local_path, p_resource, bytes, p_flags);
 }
 
 bool ResourceFormatSaverMemory::recognize(const RES &p_resource) const {
@@ -2014,9 +2012,15 @@ void ResourceFormatSaverMemory::get_recognized_extensions(const RES &p_resource,
 	p_extensions->push_back("tich");
 }
 
+uint64_t ResourceFormatSaverMemory::get_state_size()
+{
+	return bytes;
+}
+
 ResourceFormatSaverMemory *ResourceFormatSaverMemory::singleton = NULL;
 
-ResourceFormatSaverMemory::ResourceFormatSaverMemory() {
-
+ResourceFormatSaverMemory::ResourceFormatSaverMemory() :
+	bytes(0)
+{
 	singleton = this;
 }

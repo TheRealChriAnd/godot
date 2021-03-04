@@ -14,6 +14,8 @@
 #include "core/os/os.h"
 #include "main/Performance.h"
 
+#include "resource_format_memory.h"
+
 #define SAVE_FILE "res://saved.tich"
 //#define SAVE_FILE "res://saved.tscn"
 
@@ -49,6 +51,7 @@ void TichSystem::Update(uint64_t frameTime)
 				os->print("Save Time %llu\n", time);
 				os->print("Memory %llu\n", Memory::get_mem_usage());
 				os->print("Frame Time %llu\n", frameTime);
+				os->print("State Size %llu\n", ResourceFormatSaverMemory::get_singleton()->get_state_size());
 				//os->print("Memory %f\n", Performance::get_singleton()->get_monitor(Performance::Monitor::MEMORY_DYNAMIC));
 			}
 		}	

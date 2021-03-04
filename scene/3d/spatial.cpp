@@ -36,6 +36,8 @@
 #include "scene/main/viewport.h"
 #include "scene/scene_string_names.h"
 
+#include "modules/tich/TichInfo.h"
+
 /*
 
  possible algorithms:
@@ -138,7 +140,7 @@ void Spatial::_notification(int p_what) {
 
 			if (data.toplevel && !Engine::get_singleton()->is_editor_hint()) {
 
-				if (data.parent) {
+				if (data.parent && !TichInfo::IsLoading()) {
 					data.local_transform = data.parent->get_global_transform() * get_transform();
 					data.dirty = DIRTY_VECTORS; //global is always dirty upon entering a scene
 				}
@@ -750,6 +752,7 @@ void Spatial::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_scale"), &Spatial::get_scale);
 	ClassDB::bind_method(D_METHOD("set_global_transform", "global"), &Spatial::set_global_transform);
 	ClassDB::bind_method(D_METHOD("get_global_transform"), &Spatial::get_global_transform);
+
 	ClassDB::bind_method(D_METHOD("get_parent_spatial"), &Spatial::get_parent_spatial);
 	ClassDB::bind_method(D_METHOD("set_ignore_transform_notification", "enabled"), &Spatial::set_ignore_transform_notification);
 	ClassDB::bind_method(D_METHOD("set_as_toplevel", "enable"), &Spatial::set_as_toplevel);
@@ -804,6 +807,9 @@ void Spatial::_bind_methods() {
 	BIND_CONSTANT(NOTIFICATION_VISIBILITY_CHANGED);
 
 	//ADD_PROPERTY( PropertyInfo(Variant::TRANSFORM,"transform/global",PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR ), "set_global_transform", "get_global_transform") ;
+
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "toplevel", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_as_toplevel", "is_set_as_toplevel");
+
 	ADD_GROUP("Transform", "");
 	ADD_PROPERTY(PropertyInfo(Variant::TRANSFORM, "global_transform", PROPERTY_HINT_NONE, "", 0), "set_global_transform", "get_global_transform");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "translation", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_translation", "get_translation");
@@ -816,12 +822,12 @@ void Spatial::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "visible"), "set_visible", "is_visible");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "gizmo", PROPERTY_HINT_RESOURCE_TYPE, "SpatialGizmo", 0), "set_gizmo", "get_gizmo");
 
+
 	ADD_SIGNAL(MethodInfo("visibility_changed"));
 }
 
 Spatial::Spatial() :
 		xform_change(this) {
-
 	data.dirty = DIRTY_NONE;
 	data.children_lock = 0;
 

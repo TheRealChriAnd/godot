@@ -109,6 +109,26 @@ Error ResourceInteractiveLoaderText::_parse_ext_resource_dummy(DummyReadData *p_
 	return OK;
 }
 
+Error ResourceInteractiveLoaderText::_parse_tich_reference(VariantParser::Stream *p_stream, Variant &value, int &line, String &r_err_str) {
+
+	VariantParser::Token token;
+	VariantParser::get_token(p_stream, token, line, r_err_str);
+	if (token.type != VariantParser::TK_STRING) {
+		r_err_str = "Expected string (tich-reference path)";
+		return ERR_PARSE_ERROR;
+	}
+
+	value = Variant((String)token.value, true);
+
+	VariantParser::get_token(p_stream, token, line, r_err_str);
+	if (token.type != VariantParser::TK_PARENTHESIS_CLOSE) {
+		r_err_str = "Expected ')'";
+		return ERR_PARSE_ERROR;
+	}
+
+	return OK;
+}
+
 Error ResourceInteractiveLoaderText::_parse_sub_resource(VariantParser::Stream *p_stream, Ref<Resource> &r_res, int &line, String &r_err_str) {
 
 	VariantParser::Token token;
@@ -893,6 +913,7 @@ void ResourceInteractiveLoaderText::open(FileAccess *p_f, bool p_skip_first_tag)
 
 	rp.ext_func = _parse_ext_resources;
 	rp.sub_func = _parse_sub_resources;
+	rp.tich_func = _parse_tich_references;
 	rp.func = NULL;
 	rp.userdata = this;
 }
@@ -1776,6 +1797,11 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 
 			fileData += "]";
 			f->store_line("]");
+
+
+			/*
+			* Writes the node data line: value = 36
+			*/
 
 			for (int j = 0; j < state->get_node_property_count(i); j++) {
 

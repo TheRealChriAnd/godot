@@ -35,6 +35,8 @@
 #include "scene/main/viewport.h"
 #include "servers/visual_server.h"
 
+#include "modules/tich/TichInfo.h"
+
 #ifdef TOOLS_ENABLED
 Dictionary Node2D::_edit_get_state() const {
 
@@ -136,7 +138,8 @@ void Node2D::_update_transform() {
 	_mat.set_rotation_and_scale(angle, _scale);
 	_mat.elements[2] = pos;
 
-	VisualServer::get_singleton()->canvas_item_set_transform(get_canvas_item(), _mat);
+	if (!TichInfo::IsSaving())
+		VisualServer::get_singleton()->canvas_item_set_transform(get_canvas_item(), _mat);
 
 	if (!is_inside_tree())
 		return;

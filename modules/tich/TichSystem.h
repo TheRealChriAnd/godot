@@ -8,16 +8,16 @@ class ParallaxBackground;
 
 class TichSystem : public Reference
 {
-	friend class Node;
+	friend class SceneTree;
 
 public:
 	TichSystem();
 
-	void Update(float dts);
+	void Update(uint64_t frameTime);
 
 private:
-	void Save();
-	void Load();
+	bool Save();
+	bool Load();
 	void OnReadyPost();
 	void MakeSceneOwner();
 	void SetOwnerRecursively(Node* node, Node* owner);

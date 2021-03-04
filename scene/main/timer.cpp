@@ -38,7 +38,7 @@ void Timer::_notification(int p_what) {
 
 		case NOTIFICATION_READY: {
 
-			if (autostart) {
+			if (autostart || started) {
 #ifdef TOOLS_ENABLED
 				if (Engine::get_singleton()->is_editor_hint() && get_tree()->get_edited_scene_root() && (get_tree()->get_edited_scene_root() == this || get_tree()->get_edited_scene_root()->is_a_parent_of(this)))
 					break;
@@ -113,7 +113,12 @@ void Timer::start(float p_time) {
 	if (p_time > 0) {
 		set_wait_time(p_time);
 	}
-	time_left = wait_time;
+
+	if (!started) {
+		time_left = wait_time;
+		started = true;
+	}
+	
 	_set_process(true);
 }
 
@@ -121,6 +126,7 @@ void Timer::stop() {
 	time_left = -1;
 	_set_process(false);
 	autostart = false;
+	started = false;
 }
 
 void Timer::set_paused(bool p_paused) {
@@ -142,6 +148,21 @@ bool Timer::is_stopped() const {
 float Timer::get_time_left() const {
 
 	return time_left > 0 ? time_left : 0;
+}
+
+void Timer::set_has_started(bool p_started)
+{
+	started = p_started;
+}
+
+bool Timer::has_started() const
+{
+	return started;
+}
+
+void Timer::set_time_left(float p_time)
+{
+	time_left = p_time;
 }
 
 void Timer::set_timer_process_mode(TimerProcessMode p_mode) {
@@ -198,7 +219,11 @@ void Timer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("is_stopped"), &Timer::is_stopped);
 
+	ClassDB::bind_method(D_METHOD("set_time_left", "time_sec"), &Timer::set_time_left);
 	ClassDB::bind_method(D_METHOD("get_time_left"), &Timer::get_time_left);
+
+	ClassDB::bind_method(D_METHOD("set_has_started", "enable"), &Timer::set_has_started);
+	ClassDB::bind_method(D_METHOD("has_started"), &Timer::has_started);
 
 	ClassDB::bind_method(D_METHOD("set_timer_process_mode", "mode"), &Timer::set_timer_process_mode);
 	ClassDB::bind_method(D_METHOD("get_timer_process_mode"), &Timer::get_timer_process_mode);
@@ -210,7 +235,8 @@ void Timer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "one_shot"), "set_one_shot", "is_one_shot");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autostart"), "set_autostart", "has_autostart");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "paused", PROPERTY_HINT_NONE, "", 0), "set_paused", "is_paused");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "time_left", PROPERTY_HINT_NONE, "", 0), "", "get_time_left");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "time_left", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_time_left", "get_time_left");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "started", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_has_started", "has_started");
 
 	BIND_ENUM_CONSTANT(TIMER_PROCESS_PHYSICS);
 	BIND_ENUM_CONSTANT(TIMER_PROCESS_IDLE);
@@ -224,4 +250,5 @@ Timer::Timer() {
 	time_left = -1;
 	processing = false;
 	paused = false;
+	started = false;
 }

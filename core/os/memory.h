@@ -43,10 +43,9 @@
 class Memory {
 
 	Memory();
-#ifdef DEBUG_ENABLED
+
 	static uint64_t mem_usage;
 	static uint64_t max_usage;
-#endif
 
 	static uint64_t alloc_count;
 

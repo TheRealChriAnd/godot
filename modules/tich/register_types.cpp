@@ -1,8 +1,6 @@
 #include "register_types.h"
 
-#include "animation_player.h"
 #include "resource_format_memory.h"
-#include "packed_scene.h"
 #include "TichSystem.h"
 
 #include "core/class_db.h"

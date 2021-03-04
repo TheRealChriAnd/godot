@@ -1,9 +1,9 @@
 #include "TichSystem.h"
 
-#include "canvas_item.h"
-#include "scene_tree.h"
+#include "scene/2d/canvas_item.h"
+#include "scene/main/scene_tree.h"
 #include "scene/2d/parallax_layer.h"
-#include "packed_scene.h"
+#include "scene/resources/packed_scene.h"
 #include "TichInfo.h"
 
 #include "main/input_default.h"
@@ -11,8 +11,11 @@
 #include "scene/2d/parallax_background.h"
 #include "core/engine.h"
 
-//#define SAVE_FILE "res://saved.tich"
-#define SAVE_FILE "res://saved.tscn"
+#include "core/os/os.h"
+#include "main/Performance.h"
+
+#define SAVE_FILE "res://saved.tich"
+//#define SAVE_FILE "res://saved.tscn"
 
 TichSystem* TichSystem::s_Instance = nullptr;
 
@@ -24,7 +27,7 @@ TichSystem::TichSystem()
 	lastButtonStateF2 = false;
 }
 
-void TichSystem::Update(float dts)
+void TichSystem::Update(uint64_t frameTime)
 {
 	if (Engine::get_singleton()->is_editor_hint())
 		return;
@@ -38,14 +41,31 @@ void TichSystem::Update(float dts)
 	{
 		if (!lastButtonStateF1)
 		{
-			Save();
+			OS* os = OS::get_singleton();
+			uint64_t time = os->get_ticks_usec();
+			if (Save())
+			{
+				time = os->get_ticks_usec() - time;
+				os->print("Save Time %llu\n", time);
+				os->print("Memory %llu\n", Memory::get_mem_usage());
+				os->print("Frame Time %llu\n", frameTime);
+				//os->print("Memory %f\n", Performance::get_singleton()->get_monitor(Performance::Monitor::MEMORY_DYNAMIC));
+			}
 		}	
 	}
 	else if (buttonStateF2)
 	{
 		if (!lastButtonStateF2)
 		{
-			Load();
+			OS *os = OS::get_singleton();
+			uint64_t time = os->get_ticks_usec();
+			if(Load())
+			{
+				time = os->get_ticks_usec() - time;
+				os->print("Load Time %llu\n", time);
+				os->print("Memory %llu\n", Memory::get_mem_usage());
+				os->print("Frame Time %llu\n", frameTime);
+			}
 		}	
 	}
 
@@ -57,15 +77,16 @@ void TichSystem::Update(float dts)
 		MakeSceneOwner();
 
 		currentTreeVersion = SceneTree::get_singleton()->get_tree_version();
-
-		WARN_PRINT("TreeVersion Changed")
 	}
 }
 
-void TichSystem::Save()
+bool TichSystem::Save()
 {
+	if (TichInfo::s_IsLoading)
+		return false;
+
 	TichInfo::s_IsSaving = true;
-	WARN_PRINT("Saving");
+	//WARN_PRINT("Saving");
 
 	OnPreSave();
 
@@ -81,7 +102,7 @@ void TichSystem::Save()
 	{
 		ERR_PRINT("Failed to pack scene, Error: " + result);
 		TichInfo::s_IsSaving = false;
-		return;
+		return false;
 	}
 
 	result = ResourceSaver::save(SAVE_FILE, packedScene);
@@ -90,21 +111,22 @@ void TichSystem::Save()
 	{
 		ERR_PRINT("Failed to save scene, Error: " + result);
 		TichInfo::s_IsSaving = false;
-		return;
+		return false;
 	}
 
-	WARN_PRINT("Scene Saved Successfully");
+	//WARN_PRINT("Scene Saved Successfully");
 
 	TichInfo::s_IsSaving = false;
+	return true;
 }
 
-void TichSystem::Load()
+bool TichSystem::Load()
 {
 	if (TichInfo::s_IsLoading)
-		return;
+		return false;
 
 	TichInfo::s_IsLoading = true;
-	WARN_PRINT("Loading");
+	//WARN_PRINT("Loading");
 
 	Error result = SceneTree::get_singleton()->change_scene(SAVE_FILE);
 
@@ -113,15 +135,18 @@ void TichSystem::Load()
 	if (result != Error::OK)
 	{
 		ERR_PRINT("Failed to load scene, Error: " + result);
-		return;
+		return false;
 	}
 
-	WARN_PRINT("Scene Loaded Successfully");
+	//WARN_PRINT("Scene Loaded Successfully");
+	return true;
 }
 
 void TichSystem::OnReadyPost()
 {
 	TichInfo::s_IsLoading = false;
+
+	MakeSceneOwner();
 }
 
 void TichSystem::MakeSceneOwner()

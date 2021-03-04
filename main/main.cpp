@@ -70,6 +70,8 @@
 #include "servers/physics_server.h"
 #include "servers/register_server_types.h"
 
+#include "modules/tich/TichSystem.h"
+
 #ifdef TOOLS_ENABLED
 #include "editor/doc/doc_data.h"
 #include "editor/doc/doc_data_class_path.gen.h"
@@ -2134,6 +2136,8 @@ bool Main::iteration() {
 	}
 
 	AudioServer::get_singleton()->update();
+
+	TichSystem::GetInstance()->Update(frame_time);
 
 	if (script_debugger) {
 		if (script_debugger->is_profiling()) {

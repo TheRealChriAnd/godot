@@ -39,7 +39,7 @@
 #include "core/print_string.h"
 #include "core/project_settings.h"
 #include "main/input_default.h"
-#include "node.h"
+#include "scene/main/node.h"
 #include "scene/debugger/script_debugger_remote.h"
 #include "scene/resources/dynamic_font.h"
 #include "scene/resources/material.h"
@@ -48,9 +48,12 @@
 #include "scene/scene_string_names.h"
 #include "servers/physics_2d_server.h"
 #include "servers/physics_server.h"
-#include "viewport.h"
+#include "scene/main/viewport.h"
 
 #include <stdio.h>
+
+#include "modules/tich/TichSystem.h"
+#include "modules/tich/TichInfo.h"
 
 void SceneTreeTimer::_bind_methods() {
 
@@ -1277,8 +1280,22 @@ Node *SceneTree::get_current_scene() const {
 
 void SceneTree::_change_scene(Node *p_to) {
 
-	if (current_scene) {
-		memdelete(current_scene);
+	if (current_scene)
+	{
+		if (TichInfo::IsLoading())
+		{
+			for (int i = root->get_child_count() - 1; i >= 0; i--)
+			{
+				Node *node = root->get_child(i);
+				root->remove_child(node);
+				memdelete(node);
+			}
+		}
+		else
+		{
+			root->remove_child(current_scene);
+			memdelete(current_scene);
+		}
 		current_scene = NULL;
 	}
 
@@ -1290,9 +1307,55 @@ void SceneTree::_change_scene(Node *p_to) {
 		return;
 	}
 
-	if (p_to) {
-		current_scene = p_to;
-		root->add_child(p_to);
+	if (p_to)
+	{
+		if (TichInfo::IsLoading())
+		{
+			List<PropertyInfo> props;
+			ProjectSettings::get_singleton()->get_property_list(&props);
+
+			for (List<PropertyInfo>::Element *E = props.front(); E; E = E->next())
+			{
+				String s = E->get().name;
+				if (!s.begins_with("autoload/"))
+					continue;
+
+				String name = s.get_slicec('/', 1);
+
+				Node *n = p_to->get_node_or_null(name);
+				if (n)
+				{
+					String path = ProjectSettings::get_singleton()->get(s);
+					if (path.begins_with("*"))
+					{
+						for (int i = 0; i < ScriptServer::get_language_count(); i++)
+						{
+							ScriptServer::get_language(i)->add_global_constant(name, n);
+						}
+					}
+				}
+			}
+
+			for (int i = p_to->get_child_count() - 1; i >= 0; i--)
+			{
+				Node *node = p_to->get_child(i);
+				p_to->remove_child(node);
+				root->add_child(node);
+
+				if (current_scene == NULL || node->get_child_count() > current_scene->get_child_count())
+				{
+					current_scene = node;
+				}
+			}
+			memdelete(p_to);
+
+			TichSystem::GetInstance()->OnReadyPost();
+		}
+		else
+		{
+			current_scene = p_to;
+			root->add_child(p_to);
+		}
 	}
 }
 
@@ -2155,4 +2218,9 @@ SceneTree::~SceneTree() {
 	}
 
 	if (singleton == this) singleton = NULL;
+}
+
+uint64_t SceneTree::get_tree_version() const
+{
+	return tree_version;
 }

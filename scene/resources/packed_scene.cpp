@@ -39,6 +39,9 @@
 #include "scene/gui/control.h"
 #include "scene/main/instance_placeholder.h"
 
+#include "scene/main/viewport.h"
+#include "modules/tich/TichInfo.h"
+
 #define PACKED_SCENE_VERSION 2
 
 bool SceneState::can_instance() const {
@@ -76,6 +79,17 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 
 	//Vector<Variant> properties;
 
+
+	struct TichRefNode
+	{
+		int nodeIndex;
+		Map<StringName, Variant> tichRefs;
+	};
+
+	Vector<TichRefNode> tichRefNodes;
+	Vector<Node*> externalNodes;
+
+
 	const NodeData *nd = &nodes[0];
 
 	Node **ret_nodes = (Node **)alloca(sizeof(Node *) * nc);
@@ -92,16 +106,21 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 
 		if (i > 0) {
 
-			ERR_FAIL_COND_V_MSG(n.parent == -1, NULL, vformat("Invalid scene: node %s does not specify its parent node.", snames[n.name]));
-			NODE_FROM_ID(nparent, n.parent);
+			//ERR_FAIL_COND_V_MSG(n.parent == -1, NULL, vformat("Invalid scene: node %s does not specify its parent node.", snames[n.name]));
+			if (n.parent >= 0)
+			{
+				NODE_FROM_ID(nparent, n.parent);
 #ifdef DEBUG_ENABLED
-			if (!nparent && (n.parent & FLAG_ID_IS_PATH)) {
-
-				WARN_PRINT(String("Parent path '" + String(node_paths[n.parent & FLAG_MASK]) + "' for node '" + String(snames[n.name]) + "' has vanished when instancing: '" + get_path() + "'.").ascii().get_data());
-			}
+				if (!nparent && (n.parent & FLAG_ID_IS_PATH))
+				{
+					WARN_PRINT(String("Parent path '" + String(node_paths[n.parent & FLAG_MASK]) + "' for node '" + String(snames[n.name]) + "' has vanished when instancing: '" + get_path() + "'.").ascii().get_data());
+				}
 #endif
-			parent = nparent;
-		} else {
+				parent = nparent;
+			}
+		}
+		else
+		{
 			// i == 0 is root node. Confirm that it doesn't have a parent defined.
 			ERR_FAIL_COND_V_MSG(n.parent != -1, nullptr, vformat("Invalid scene: root node %s cannot specify a parent node.", snames[n.name]));
 		}
@@ -193,11 +212,29 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 
 				const NodeData::Property *nprops = &n.properties[0];
 
+				TichRefNode tichRefNode;
+
 				for (int j = 0; j < nprop_count; j++) {
 
 					bool valid;
 					ERR_FAIL_INDEX_V(nprops[j].name, sname_count, NULL);
 					ERR_FAIL_INDEX_V(nprops[j].value, prop_count, NULL);
+
+					const StringName& name = snames[nprops[j].name];
+					Variant value = props[nprops[j].value];
+
+					if (value.get_type() == Variant::Type::TICH_REF)
+					{
+						tichRefNode.tichRefs.insert(name, value);
+					}
+					else if (value.get_type() == Variant::Type::ARRAY)
+					{
+						tichRefNode.tichRefs.insert(name, value);
+					}
+					else if (value.get_type() == Variant::Type::DICTIONARY)
+					{
+						tichRefNode.tichRefs.insert(name, value);
+					}
 
 					if (snames[nprops[j].name] == CoreStringNames::get_singleton()->_script) {
 						//work around to avoid old script variables from disappearing, should be the proper fix to:
@@ -209,15 +246,13 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 							node->get_script_instance()->get_property_state(old_state);
 						}
 
-						node->set(snames[nprops[j].name], props[nprops[j].value], &valid);
+						node->set(name, value, &valid);
 
 						//restore old state for new script, if exists
 						for (List<Pair<StringName, Variant> >::Element *E = old_state.front(); E; E = E->next()) {
 							node->set(E->get().first, E->get().second);
 						}
 					} else {
-
-						Variant value = props[nprops[j].value];
 
 						if (value.get_type() == Variant::OBJECT) {
 							//handle resources that are local to scene by duplicating them if needed
@@ -253,8 +288,14 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 						} else if (p_edit_state == GEN_EDIT_STATE_INSTANCE) {
 							value = value.duplicate(true); // Duplicate arrays and dictionaries for the editor
 						}
-						node->set(snames[nprops[j].name], value, &valid);
+						node->set(name, value, &valid);
 					}
+				}
+
+				if (tichRefNode.tichRefs.size() > 0)
+				{
+					tichRefNode.nodeIndex = i;
+					tichRefNodes.push_back(tichRefNode);
 				}
 			}
 
@@ -267,25 +308,43 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 				node->add_to_group(snames[n.groups[j]], true);
 			}
 
-			if (n.instance >= 0 || n.type != TYPE_INSTANCED || i == 0) {
+			if (n.instance >= 0 || n.type != TYPE_INSTANCED || i == 0)
+			{
 				//if node was not part of instance, must set its name, parenthood and ownership
-				if (i > 0) {
-					if (parent) {
+				if (i > 0)
+				{
+					if (parent)
+					{
 						parent->_add_child_nocheck(node, snames[n.name]);
 						if (n.index >= 0 && n.index < parent->get_child_count() - 1)
 							parent->move_child(node, n.index);
-					} else {
-						//it may be possible that an instanced scene has changed
-						//and the node has nowhere to go anymore
-						stray_instances.push_back(node); //can't be added, go to stray list
 					}
-				} else {
-					if (Engine::get_singleton()->is_editor_hint()) {
+					else
+					{
+						node->_set_name_nocheck(snames[n.name]);
+
+						const String &name = snames[n.name];
+						if (name.begins_with("_"))
+							externalNodes.push_back(node);
+						else
+							stray_instances.push_back(node);
+					}
+				}
+				else
+				{
+					if (Engine::get_singleton()->is_editor_hint())
+					{
 						//validate name if using editor, to avoid broken
 						node->set_name(snames[n.name]);
-					} else {
+					}
+					else
+					{
 						node->_set_name_nocheck(snames[n.name]);
 					}
+
+					const String &name = snames[n.name];
+					if (name.begins_with("_"))
+						externalNodes.push_back(node);
 				}
 			}
 
@@ -352,7 +411,104 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 		}
 	}
 
+
+	Node *node = NULL;
+
+	for (int i = 0; i < tichRefNodes.size(); i++)
+	{
+		const TichRefNode& tichRefNode = tichRefNodes[i];
+		node = ret_nodes[tichRefNode.nodeIndex];
+
+		for (Map<StringName, Variant>::Element *E = tichRefNode.tichRefs.front(); E; E = E->next())
+		{
+			Variant value = E->get();
+
+			if (value.get_type() == Variant::Type::ARRAY)
+			{
+				Array arr = value;
+				for (int j = 0; j < arr.size(); j++)
+				{
+					Variant& element = arr[j];
+					if (element.get_type() == Variant::Type::TICH_REF)
+					{
+						injectTichRefProperty(element, element, externalNodes, ret_nodes[0]);
+					}
+				}
+				node->set(E->key(), arr);
+			}
+			else if (value.get_type() == Variant::Type::DICTIONARY)
+			{
+				Dictionary dic = value;
+				for (int j = 0; j < dic.size(); j++)
+				{
+					Variant &element = dic.get_value_at_index(j);
+					if (element.get_type() == Variant::Type::TICH_REF)
+					{
+						injectTichRefProperty(element, element, externalNodes, ret_nodes[0]);
+
+						dic[dic.get_key_at_index(j)] = element;
+					}
+				}
+				node->set(E->key(), dic);
+			}
+			else
+			{
+				injectTichRefProperty(value, value, externalNodes, ret_nodes[0]);
+				node->set(E->key(), value);
+			}
+		}
+	}
+
 	return ret_nodes[0];
+}
+
+void SceneState::injectTichRefProperty(Variant &retVariant, String path, const Vector<Node *> &externalNodes, const Node *root) const {
+	bool isWeakRef = false;
+
+	if (path.begins_with("#"))
+	{
+		isWeakRef = true;
+		path = path.substr(1);
+	}
+
+	if (path.begins_with("_"))
+	{
+		for (int j = 0; j < externalNodes.size(); j++)
+		{
+			if (externalNodes.get(j)->get_name() == path)
+			{
+				retVariant = externalNodes.get(j);
+				break;
+			}
+		}
+		if (retVariant.get_type() == Variant::Type::NIL)
+		{
+			ERR_PRINT("Failed to find TichRef " + path);
+			return;
+		}
+	}
+	else if (path != "null")
+	{
+		retVariant = root->get_node_or_null(path);
+		if (retVariant.get_type() == Variant::Type::NIL && path.begins_with(root->get_name()))
+		{
+			path = path.replace_first(String(root->get_name()) + "/", "");
+			retVariant = root->get_node_or_null(path);
+		}
+
+		ERR_FAIL_COND_MSG(retVariant.get_type() == Variant::Type::NIL, "TichRef Node not found: " + path + ".");
+	}
+	else
+	{
+		retVariant = Variant();
+	}
+
+	if (isWeakRef)
+	{
+		Ref<WeakRef> weakRef = memnew(WeakRef);
+		weakRef->set_obj(retVariant);
+		retVariant = weakRef;
+	}
 }
 
 static int _nm_get_string(const String &p_string, Map<StringName, int> &name_map) {
@@ -375,7 +531,7 @@ static int _vm_get_variant(const Variant &p_variant, HashMap<Variant, int, Varia
 	return idx;
 }
 
-Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map<StringName, int> &name_map, HashMap<Variant, int, VariantHasher, VariantComparator> &variant_map, Map<Node *, int> &node_map, Map<Node *, int> &nodepath_map) {
+Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, NameMap &name_map, VariantMap &variant_map, Map<Node *, int> &node_map, Map<Node *, int> &nodepath_map, Set<Node *> &externalNodes) {
 
 	// this function handles all the work related to properly packing scenes, be it
 	// instanced or inherited.
@@ -444,13 +600,16 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 						nd.instance = _vm_get_variant(p_node->get_filename(), variant_map);
 						nd.instance |= FLAG_INSTANCE_IS_PLACEHOLDER;
 					} else {
-						//must instance ourselves
-						Ref<PackedScene> instance = ResourceLoader::load(p_node->get_filename());
-						if (!instance.is_valid()) {
-							return ERR_CANT_OPEN;
-						}
 
-						nd.instance = _vm_get_variant(instance, variant_map);
+						if (!TichInfo::IsSaving())
+						{
+							//must instance ourselves
+							Ref<PackedScene> instance = ResourceLoader::load(p_node->get_filename());
+							if (!instance.is_valid()) {
+								return ERR_CANT_OPEN;
+							}
+							nd.instance = _vm_get_variant(instance, variant_map);
+						}
 					}
 				}
 				n = NULL;
@@ -481,86 +640,28 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 	p_node->get_property_list(&plist);
 	StringName type = p_node->get_class();
 
-	for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next()) {
 
-		if (!(E->get().usage & PROPERTY_USAGE_STORAGE)) {
+	Variant value;
+	String name;
+	bool isExternalNode;
+	bool isWeakRef;
+
+	for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next())
+	{
+		if (!is_property_to_be_saved(p_node, E->get(), name, value, isExternalNode, isWeakRef))
 			continue;
+
+		if (isExternalNode)
+		{
+			Error err = _parse_external_node(value, name, value, isWeakRef, externalNodes, name_map, variant_map, node_map);
+			if (err)
+				return err;
 		}
 
-		String name = E->get().name;
-		Variant value = p_node->get(E->get().name);
-
-		bool isdefault = false;
-		Variant default_value = ClassDB::class_get_default_property_value(type, name);
-
-		if (default_value.get_type() != Variant::NIL) {
-			isdefault = bool(Variant::evaluate(Variant::OP_EQUAL, value, default_value));
-		}
-
-		Ref<Script> script = p_node->get_script();
-		if (!isdefault && script.is_valid() && script->get_property_default_value(name, default_value)) {
-			isdefault = bool(Variant::evaluate(Variant::OP_EQUAL, value, default_value));
-		}
-		// the version above makes more sense, because it does not rely on placeholder or usage flag
-		// in the script, just the default value function.
-		// if (E->get().usage & PROPERTY_USAGE_SCRIPT_DEFAULT_VALUE) {
-		// 	isdefault = true; //is script default value
-		// }
-
-		if (pack_state_stack.size()) {
-			// we are on part of an instanced subscene
-			// or part of instanced scene.
-			// only save what has been changed
-			// only save changed properties in instance
-
-			if ((E->get().usage & PROPERTY_USAGE_NO_INSTANCE_STATE) || E->get().name == "__meta__") {
-				//property has requested that no instance state is saved, sorry
-				//also, meta won't be overridden or saved
-				continue;
-			}
-
-			bool exists = false;
-			Variant original;
-
-			for (List<PackState>::Element *F = pack_state_stack.back(); F; F = F->prev()) {
-				//check all levels of pack to see if the property exists somewhere
-				const PackState &ps = F->get();
-
-				original = ps.state->get_property_value(ps.node, E->get().name, exists);
-				if (exists) {
-					break;
-				}
-			}
-
-			if (exists) {
-
-				//check if already exists and did not change
-				if (value.get_type() == Variant::REAL && original.get_type() == Variant::REAL) {
-					//this must be done because, as some scenes save as text, there might be a tiny difference in floats due to numerical error
-					float a = value;
-					float b = original;
-
-					if (Math::is_equal_approx(a, b))
-						continue;
-				} else if (bool(Variant::evaluate(Variant::OP_EQUAL, value, original))) {
-
-					continue;
-				}
-			}
-
-			if (!exists && isdefault) {
-				//does not exist in original node, but it's the default value
-				//so safe to skip too.
-				continue;
-			}
-
-		} else {
-
-			if (isdefault) {
-				//it's the default value, no point in saving it
-				continue;
-			}
-		}
+		bool isDefault = is_default_value(type, p_node, value, name);
+	
+		if (!is_property_value_to_be_saved(pack_state_stack, E->get(), value, isDefault))
+			continue;
 
 		NodeData::Property prop;
 		prop.name = _nm_get_string(name, name_map);
@@ -668,7 +769,7 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 	for (int i = 0; i < p_node->get_child_count(); i++) {
 
 		Node *c = p_node->get_child(i);
-		Error err = _parse_node(p_owner, c, parent_node, name_map, variant_map, node_map, nodepath_map);
+		Error err = _parse_node(p_owner, c, parent_node, name_map, variant_map, node_map, nodepath_map, externalNodes);
 		if (err)
 			return err;
 	}
@@ -676,7 +777,235 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 	return OK;
 }
 
-Error SceneState::_parse_connections(Node *p_owner, Node *p_node, Map<StringName, int> &name_map, HashMap<Variant, int, VariantHasher, VariantComparator> &variant_map, Map<Node *, int> &node_map, Map<Node *, int> &nodepath_map) {
+bool SceneState::is_property_to_be_saved(Node *node, const PropertyInfo &propertyInfo, String &name, Variant &value, bool &isExternal, bool& isWeakRef)
+{
+	isExternal = false;
+	isWeakRef = false;
+
+	if (!(propertyInfo.usage & PROPERTY_USAGE_STORAGE))
+	{
+		if (!TichInfo::IsSaving())
+		{
+			return false;
+		}
+		else
+		{
+			if (!(propertyInfo.usage & PROPERTY_USAGE_SCRIPT_VARIABLE))
+			{
+				return false;
+			}
+
+			name = propertyInfo.name;
+			value = node->get(propertyInfo.name);
+
+			if ((Node *)value)
+			{
+				Node *nodeValue = value;
+				isExternal = !nodeValue->is_inside_tree();
+
+				if (!isExternal)
+					value = Variant(nodeValue->get_path_tich_ref(), true);
+			}
+			else
+			{
+				if (Object::cast_to<WeakRef>(value))
+				{
+					WeakRef *object = Object::cast_to<WeakRef>(value);
+					if (object)
+					{
+						Variant refValue = object->get_ref();
+						if ((Node*)refValue)
+						{
+							Node *nodeValue = refValue;
+							isWeakRef = true;
+							isExternal = !nodeValue->is_inside_tree();
+
+							if (!isExternal)
+								value = Variant("#" + nodeValue->get_path_tich_ref(), true);
+						}
+						else if (refValue.get_type() == Variant::Type::NIL)
+						{
+							isWeakRef = true;
+							value = Variant("#null", true);
+						}
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		name = propertyInfo.name;
+		value = node->get(propertyInfo.name);
+	}
+
+	return true;
+}
+
+bool SceneState::is_default_value(const StringName& type, Node *node, const Variant &value, const String &name)
+{
+	bool isdefault = false;
+	Variant default_value = ClassDB::class_get_default_property_value(type, name);
+
+	if (default_value.get_type() != Variant::NIL)
+	{
+		isdefault = bool(Variant::evaluate(Variant::OP_EQUAL, value, default_value));
+	}
+
+	Ref<Script> script = node->get_script();
+	if (!isdefault && script.is_valid() && script->get_property_default_value(name, default_value))
+	{
+		isdefault = bool(Variant::evaluate(Variant::OP_EQUAL, value, default_value));
+	}
+	return isdefault;
+}
+
+bool SceneState::is_property_value_to_be_saved(List<PackState> &pack_state_stack, const PropertyInfo &propertyInfo, const Variant &value, bool isDefault)
+{
+	if (pack_state_stack.size())
+	{
+		// we are on part of an instanced subscene
+		// or part of instanced scene.
+		// only save what has been changed
+		// only save changed properties in instance
+
+		if ((propertyInfo.usage & PROPERTY_USAGE_NO_INSTANCE_STATE) || propertyInfo.name == "__meta__")
+		{
+			//property has requested that no instance state is saved, sorry
+			//also, meta won't be overridden or saved
+			return false;
+		}
+
+		bool exists = false;
+		Variant original;
+
+		for (List<PackState>::Element *F = pack_state_stack.back(); F; F = F->prev())
+		{
+			//check all levels of pack to see if the property exists somewhere
+			const PackState &ps = F->get();
+
+			original = ps.state->get_property_value(ps.node, propertyInfo.name, exists);
+			if (exists)
+			{
+				break;
+			}
+		}
+
+		if (exists)
+		{
+			//check if already exists and did not change
+			if (value.get_type() == Variant::REAL && original.get_type() == Variant::REAL)
+			{
+				//this must be done because, as some scenes save as text, there might be a tiny difference in floats due to numerical error
+				float a = value;
+				float b = original;
+
+				if (Math::is_equal_approx(a, b))
+					return false;
+
+			}
+			else if (bool(Variant::evaluate(Variant::OP_EQUAL, value, original)))
+			{
+				return false;
+			}
+		}
+
+		if (!exists && isDefault)
+		{
+			//does not exist in original node, but it's the default value
+			//so safe to skip too.
+			return false;
+		}
+	}
+	else
+	{
+		if (isDefault)
+		{
+			//it's the default value, no point in saving it
+			return false;
+		}
+	}
+
+	return true;
+}
+
+Error SceneState::_parse_external_node(Node *node, const String& varName, Variant& nodeValue, bool isWeakRef, Set<Node *> &externalNodes, NameMap &name_map, VariantMap &variant_map, NodeMap &node_map)
+{
+	bool alreadySaved = externalNodes.has(node);
+	if (!alreadySaved)
+	{
+		externalNodes.insert(node);
+		int index = externalNodes.size() - 1;
+		node->set_name("_" + varName + "_" + itos(index));
+	}
+
+	if (isWeakRef)
+		nodeValue = Variant("#" + node->get_name(), true);
+	else
+		nodeValue = Variant(node->get_name(), true);
+
+	if (alreadySaved)
+		return OK;
+
+	NodeData nd;
+	nd.name = _nm_get_string(node->get_name(), name_map);
+	nd.instance = -1; //not instanced by default
+	nd.index = -1;
+
+	List<PropertyInfo> plist;
+	node->get_property_list(&plist);
+	StringName type = node->get_class();
+	Variant value;
+	String name;
+	bool isExternalNode;
+
+	for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next())
+	{
+		if (!is_property_to_be_saved(node, E->get(), name, value, isWeakRef, isExternalNode))
+			continue;
+
+		if (isExternalNode)
+		{
+			Error err = _parse_external_node(value, name, value, isWeakRef, externalNodes, name_map, variant_map, node_map);
+			if (err)
+				return err;
+		}
+
+		bool isDefault = is_default_value(type, node, value, name);
+
+		if (isDefault)
+			continue;
+
+		NodeData::Property prop;
+		prop.name = _nm_get_string(name, name_map);
+		prop.value = _vm_get_variant(value, variant_map);
+		nd.properties.push_back(prop);
+	}
+
+	List<Node::GroupInfo> groups;
+	node->get_groups(&groups);
+	for (List<Node::GroupInfo>::Element *E = groups.front(); E; E = E->next())
+	{
+		Node::GroupInfo &gi = E->get();
+
+		if (!gi.persistent)
+			continue;
+
+		nd.groups.push_back(_nm_get_string(gi.name, name_map));
+	}
+
+	nd.owner = -1;
+	nd.type = _nm_get_string(type, name_map);
+	nd.parent = -1;
+
+	int idx = nodes.size();
+	node_map[node] = idx;
+	nodes.push_back(nd);
+
+	return OK;
+}
+
+Error SceneState::_parse_connections(Node *p_owner, Node *p_node, NameMap &name_map, HashMap<Variant, int, VariantHasher, VariantComparator> &variant_map, Map<Node *, int> &node_map, Map<Node *, int> &nodepath_map) {
 
 	if (p_node != p_owner && p_node->get_owner() && p_node->get_owner() != p_owner && !p_owner->is_editable_instance(p_node->get_owner()))
 		return OK;
@@ -879,7 +1208,9 @@ Error SceneState::pack(Node *p_scene) {
 	}
 	//instanced, only direct sub-scnes are supported of course
 
-	Error err = _parse_node(scene, scene, -1, name_map, variant_map, node_map, nodepath_map);
+	Set<Node*> nodesOutsideTree;
+
+	Error err = _parse_node(scene, scene, -1, name_map, variant_map, node_map, nodepath_map, nodesOutsideTree);
 	if (err) {
 		clear();
 		ERR_FAIL_V(err);

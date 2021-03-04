@@ -30,7 +30,7 @@
 
 #include "gdscript_compiler.h"
 
-#include "gdscript.h"
+#include "modules/gdscript/gdscript.h"
 
 bool GDScriptCompiler::_is_class_member_property(CodeGen &codegen, const StringName &p_name) {
 
@@ -1572,7 +1572,7 @@ Error GDScriptCompiler::_parse_block(CodeGen &codegen, const GDScriptParser::Blo
 	return OK;
 }
 
-Error GDScriptCompiler::_parse_function(GDScript *p_script, const GDScriptParser::ClassNode *p_class, const GDScriptParser::FunctionNode *p_func, bool p_for_ready) {
+Error GDScriptCompiler::_parse_function(GDScript *p_script, const GDScriptParser::ClassNode *p_class, const GDScriptParser::FunctionNode *p_func, bool p_for_ready, bool p_for_tich_load) {
 
 	Vector<int> bytecode;
 	CodeGen codegen;
@@ -1609,7 +1609,7 @@ Error GDScriptCompiler::_parse_function(GDScript *p_script, const GDScriptParser
 
 	/* Parse initializer -if applies- */
 
-	bool is_initializer = !p_for_ready && !p_func;
+	bool is_initializer = !p_for_ready && !p_func && !p_for_tich_load;
 
 	if (is_initializer || (p_func && String(p_func->name) == "_init")) {
 		//parse initializer for class members
@@ -1627,7 +1627,7 @@ Error GDScriptCompiler::_parse_function(GDScript *p_script, const GDScriptParser
 		is_initializer = true;
 	}
 
-	if (p_for_ready || (p_func && String(p_func->name) == "_ready")) {
+	if (p_for_ready || p_for_tich_load || (p_func && String(p_func->name) == "_ready") || (p_func && String(p_func->name) == "_tich_load")) {
 		//parse initializer for class members
 		if (p_class->ready->statements.size()) {
 			Error err = _parse_block(codegen, p_class->ready, stack_level);
@@ -1664,7 +1664,9 @@ Error GDScriptCompiler::_parse_function(GDScript *p_script, const GDScriptParser
 	} else {
 		if (p_for_ready)
 			func_name = "_ready";
-		else
+		else if (p_for_tich_load)
+			func_name = "_tich_load";
+		else 
 			func_name = "_init";
 	}
 
@@ -2013,6 +2015,7 @@ Error GDScriptCompiler::_parse_class_blocks(GDScript *p_script, const GDScriptPa
 
 	bool has_initializer = false;
 	bool has_ready = false;
+	bool has_tich_load = false;
 
 	for (int i = 0; i < p_class->functions.size(); i++) {
 
@@ -2020,6 +2023,8 @@ Error GDScriptCompiler::_parse_class_blocks(GDScript *p_script, const GDScriptPa
 			has_initializer = true;
 		if (!has_ready && p_class->functions[i]->name == "_ready")
 			has_ready = true;
+		if (!has_tich_load && p_class->functions[i]->name == "_tich_load")
+			has_tich_load = true;
 		Error err = _parse_function(p_script, p_class, p_class->functions[i]);
 		if (err)
 			return err;
@@ -2044,6 +2049,13 @@ Error GDScriptCompiler::_parse_class_blocks(GDScript *p_script, const GDScriptPa
 	if (!has_ready && p_class->ready->statements.size()) {
 		//create a constructor
 		Error err = _parse_function(p_script, p_class, NULL, true);
+		if (err)
+			return err;
+	}
+
+	if (!has_tich_load && p_class->ready->statements.size()) {
+		//create a constructor
+		Error err = _parse_function(p_script, p_class, NULL, false, true);
 		if (err)
 			return err;
 	}

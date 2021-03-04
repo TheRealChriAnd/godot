@@ -750,6 +750,15 @@ Error decode_variant(Variant &r_variant, const uint8_t *p_buffer, int p_len, int
 			r_variant = carray;
 
 		} break;
+		case Variant::TICH_REF: {
+
+			String str;
+			Error err = _decode_string(buf, len, r_len, str);
+			if (err)
+				return err;
+			r_variant = str;
+
+		} break;
 		default: {
 			ERR_FAIL_V(ERR_BUG);
 		}
@@ -1377,6 +1386,11 @@ Error encode_variant(const Variant &p_variant, uint8_t *r_buffer, int &r_len, bo
 			}
 
 			r_len += 4 * 4 * len;
+
+		} break;
+		case Variant::TICH_REF: {
+
+			_encode_string(p_variant, buf, r_len);
 
 		} break;
 		default: {

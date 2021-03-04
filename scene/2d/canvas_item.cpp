@@ -41,6 +41,8 @@
 #include "servers/visual/visual_server_raster.h"
 #include "servers/visual_server.h"
 
+#include "modules/tich/TichInfo.h"
+
 Mutex *CanvasItemMaterial::material_mutex = NULL;
 SelfList<CanvasItemMaterial>::List *CanvasItemMaterial::dirty_materials = NULL;
 Map<CanvasItemMaterial::MaterialKey, CanvasItemMaterial::ShaderData> CanvasItemMaterial::shader_map;
@@ -966,6 +968,9 @@ void CanvasItem::_notify_transform(CanvasItem *p_node) {
 		}
 	}
 
+	if (TichInfo::IsSaving())
+		return;
+
 	for (List<CanvasItem *>::Element *E = p_node->children_items.front(); E; E = E->next()) {
 
 		CanvasItem *ci = E->get();
@@ -1235,7 +1240,7 @@ void CanvasItem::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "material", PROPERTY_HINT_RESOURCE_TYPE, "ShaderMaterial,CanvasItemMaterial"), "set_material", "get_material");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_parent_material"), "set_use_parent_material", "get_use_parent_material");
 	//exporting these things doesn't really make much sense i think
-	// ADD_PROPERTY(PropertyInfo(Variant::BOOL, "toplevel", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_as_toplevel", "is_set_as_toplevel");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "toplevel", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "set_as_toplevel", "is_set_as_toplevel");
 	// ADD_PROPERTY(PropertyInfo(Variant::BOOL,"transform/notify"),"set_transform_notify","is_transform_notify_enabled");
 
 	ADD_SIGNAL(MethodInfo("draw"));
@@ -1320,7 +1325,6 @@ int CanvasItem::get_canvas_layer() const {
 
 CanvasItem::CanvasItem() :
 		xform_change(this) {
-
 	canvas_item = VisualServer::get_singleton()->canvas_item_create();
 	visible = true;
 	pending_update = false;

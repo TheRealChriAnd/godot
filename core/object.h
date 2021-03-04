@@ -433,6 +433,8 @@ public:
 		Connection(const Variant &p_variant);
 	};
 
+	static bool buildConnectFromScript;
+
 private:
 	enum {
 		MAX_SCRIPT_INSTANCE_BINDINGS = 8

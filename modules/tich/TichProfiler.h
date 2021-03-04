@@ -21,7 +21,7 @@ private:
 		uint64_t nodes;
 		uint64_t objects;
 		uint64_t memory;
-
+		uint64_t stateSize;
 	};
 
 	void StartGs(uint64_t samples, uint16_t executionInterval, bool save);

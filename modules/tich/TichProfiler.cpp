@@ -2,6 +2,8 @@
 
 #include "TichSystem.h"
 
+#include "resource_format_memory.h"
+
 TichProfiler *TichProfiler::singleton = NULL;
 
 TichProfiler::TichProfiler() :
@@ -14,7 +16,9 @@ TichProfiler::TichProfiler() :
 	singleton = this;
 }
 
-TichProfiler::~TichProfiler() {
+TichProfiler::~TichProfiler()
+{
+
 }
 
 void TichProfiler::Update(uint64_t frameTime)
@@ -29,11 +33,11 @@ void TichProfiler::Update(uint64_t frameTime)
 		data.memory = Memory::get_mem_usage();
 		data.nodes = perf->get_monitor(Performance::Monitor::OBJECT_NODE_COUNT);
 		data.objects = perf->get_monitor(Performance::Monitor::OBJECT_COUNT);
+		data.stateSize = ResourceFormatSaverMemory::get_singleton()->get_state_size();
 
 		if ((sample % executionInterval) == 0)
 		{
 			OS *os = OS::get_singleton();
-
 			uint64_t time = os->get_ticks_usec();
 
 			if (gaImplementation)
@@ -49,9 +53,7 @@ void TichProfiler::Update(uint64_t frameTime)
 					emit_signal("_save");
 				else
 					emit_signal("_load");
-
 			}
-
 
 			data.executionTime = os->get_ticks_usec() - time;
 		}
@@ -66,12 +68,10 @@ void TichProfiler::Update(uint64_t frameTime)
 
 		if (sample == 0)
 		{
-
-			;
 			Error err;
 			FileAccess *file = FileAccess::open(dataPath, FileAccess::WRITE, &err);
 
-			String headers = "Frame Time(us);Execution Time(us);Memory(bytes);Nodes;Objects\n";
+			String headers = "Frame Time(us);Execution Time(us);Memory(bytes);State Size(bytes);Nodes;Objects\n";
 
 			file->store_string(headers);
 
@@ -80,7 +80,7 @@ void TichProfiler::Update(uint64_t frameTime)
 			{
 				const ProfilerData &data = profilingData[i];
 
-				content += itos(data.frameTime) + ";" + itos(data.executionTime) + ";" + itos(data.memory) + ";" + itos(data.nodes) + ";" + itos(data.objects) + "\n";
+				content += itos(data.frameTime) + ";" + itos(data.executionTime) + ";" + itos(data.memory) + ";" + itos(data.stateSize) + ";" + itos(data.nodes) + ";" + itos(data.objects) + "\n";
 			}
 
 			file->store_string(content);
@@ -89,10 +89,10 @@ void TichProfiler::Update(uint64_t frameTime)
 			memdelete(file);
 		}
 	}
-
 }
 
-void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, bool save, bool gaImplementation) {
+void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, bool save, bool gaImplementation)
+{
 	this->sample = samples;
 	this->save = save;
 	this->gaImplementation = gaImplementation;
@@ -111,8 +111,6 @@ void TichProfiler::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("Start", "samples", "executionInterval", "save"), &TichProfiler::StartGs);
 
-
 	ADD_SIGNAL(MethodInfo("_save"));
 	ADD_SIGNAL(MethodInfo("_load"));
-
 }

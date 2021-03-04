@@ -15,6 +15,7 @@
 #include "main/Performance.h"
 
 #include "resource_format_memory.h"
+#include "TichProfiler.h"
 
 #define SAVE_FILE "res://saved.tich"
 //#define SAVE_FILE "res://saved.tscn"
@@ -36,8 +37,17 @@ void TichSystem::Update(uint64_t frameTime)
 
 	InputDefault *input = (InputDefault *)Input::get_singleton();
 
+	//Manual
 	bool buttonStateF1 = input->is_key_pressed(KeyList::KEY_F1);
 	bool buttonStateF2 = input->is_key_pressed(KeyList::KEY_F2);
+
+	//Auto Gs
+	bool buttonStateF3 = input->is_key_pressed(KeyList::KEY_F3);
+	bool buttonStateF4 = input->is_key_pressed(KeyList::KEY_F4);
+
+	//Auto Ga
+	bool buttonStateF5 = input->is_key_pressed(KeyList::KEY_F5);
+	bool buttonStateF6 = input->is_key_pressed(KeyList::KEY_F6);
 
 	if (buttonStateF1)
 	{
@@ -52,7 +62,6 @@ void TichSystem::Update(uint64_t frameTime)
 				os->print("Memory %llu\n", Memory::get_mem_usage());
 				os->print("Frame Time %llu\n", frameTime);
 				os->print("State Size %llu\n", ResourceFormatSaverMemory::get_singleton()->get_state_size());
-				//os->print("Memory %f\n", Performance::get_singleton()->get_monitor(Performance::Monitor::MEMORY_DYNAMIC));
 			}
 		}	
 	}
@@ -71,9 +80,41 @@ void TichSystem::Update(uint64_t frameTime)
 			}
 		}	
 	}
+	else if (buttonStateF3) //Gs Save
+	{
+		if (!lastButtonStateF3)
+		{
+			TichProfiler::get_singleton()->Start(600, 60, true, false);
+		}
+	}
+	else if (buttonStateF4) //Gs Load
+	{
+		if (!lastButtonStateF4)
+		{
+			TichProfiler::get_singleton()->Start(600, 60, false, false);
+		}
+	}
+	else if (buttonStateF5) //Ga Save
+	{
+		if (!lastButtonStateF5)
+		{
+			TichProfiler::get_singleton()->Start(600, 60, true, true);
+		}
+	}
+	else if (buttonStateF6) //GaLoad
+	{
+		if (!lastButtonStateF6)
+		{
+			TichProfiler::get_singleton()->Start(600, 60, false, true);
+		}
+	}
 
 	lastButtonStateF1 = buttonStateF1;
 	lastButtonStateF2 = buttonStateF2;
+	lastButtonStateF3 = buttonStateF3;
+	lastButtonStateF4 = buttonStateF4;
+	lastButtonStateF5 = buttonStateF5;
+	lastButtonStateF6 = buttonStateF6;
 
 	if (currentTreeVersion != SceneTree::get_singleton()->get_tree_version())
 	{
@@ -81,6 +122,8 @@ void TichSystem::Update(uint64_t frameTime)
 
 		currentTreeVersion = SceneTree::get_singleton()->get_tree_version();
 	}
+
+	TichProfiler::get_singleton()->Update(frameTime);
 }
 
 bool TichSystem::Save()

@@ -2137,7 +2137,7 @@ bool Main::iteration() {
 
 	AudioServer::get_singleton()->update();
 
-	TichSystem::GetInstance()->Update(frame_time);
+	TichSystem::GetInstance()->Update(ticks_elapsed);
 
 	if (script_debugger) {
 		if (script_debugger->is_profiling()) {

@@ -14,10 +14,11 @@ public:
 	TichSystem();
 
 	void Update(uint64_t frameTime);
-
-private:
 	bool Save();
 	bool Load();
+
+private:
+
 	void OnReadyPost();
 	void MakeSceneOwner();
 	void SetOwnerRecursively(Node* node, Node* owner);
@@ -32,6 +33,10 @@ public:
 private:
 	bool lastButtonStateF1;
 	bool lastButtonStateF2;
+	bool lastButtonStateF3;
+	bool lastButtonStateF4;
+	bool lastButtonStateF5;
+	bool lastButtonStateF6;
 	uint64_t currentTreeVersion;
 
 private:

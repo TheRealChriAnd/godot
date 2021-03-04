@@ -5,16 +5,12 @@
 #include "core/os/os.h"
 #include "main/Performance.h"
 
-class TichProfiler
+class TichProfiler : public Reference
 {
-public:
+	GDCLASS(TichProfiler, Reference);
 
-	TichProfiler();
-	~TichProfiler();
-
-	void Update(uint64_t frameTime);
-
-	void Start(uint64_t samples, uint16_t executionInterval);
+	static TichProfiler *singleton;
+	static void _bind_methods();
 
 private:
 
@@ -28,12 +24,28 @@ private:
 
 	};
 
+	void StartGs(uint64_t samples, uint16_t executionInterval, bool save);
 
 private:
 
 	Vector<ProfilerData> profilingData;
 	uint64_t sample;
 	uint16_t executionInterval;
+	String dataPath;
+	bool save;
+	bool gaImplementation;
+
+public:
+	TichProfiler();
+	~TichProfiler();
+
+	void Update(uint64_t frameTime);
+
+
+	void Start(uint64_t samples, uint16_t executionInterval, bool save, bool gaImplementation = true);
+
+	static TichProfiler *get_singleton() { return singleton; }
+
 };
 
 

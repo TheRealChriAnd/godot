@@ -2,6 +2,7 @@
 
 #include "resource_format_memory.h"
 #include "TichSystem.h"
+#include "TichProfiler.h"
 
 #include "core/class_db.h"
 
@@ -14,6 +15,7 @@ static Ref<ResourceFormatSaverMemory> resource_saver_memory;
 static Ref<ResourceFormatLoaderMemory> resource_loader_memory;
 
 static Ref<TichSystem> tichSystem;
+static Ref<TichProfiler> tichProfiler;
 
 void register_tich_types()
 {
@@ -29,8 +31,12 @@ void register_tich_types()
 	ResourceLoader::add_resource_format_loader(resource_loader_memory);
 
 	ClassDB::register_class<TichSystem>();
+	ClassDB::register_class<TichProfiler>();
 
 	tichSystem.instance();
+	tichProfiler.instance();
+
+	Engine::get_singleton()->add_singleton(Engine::Singleton("TichProfiler", tichProfiler.ptr()));
 }
 
 void unregister_tich_types()
@@ -44,4 +50,5 @@ void unregister_tich_types()
 	resource_loader_memory.unref();
 
 	tichSystem.unref();
+	tichProfiler.unref();
 }

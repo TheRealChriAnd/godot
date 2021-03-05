@@ -41,6 +41,8 @@
 
 #include "core/io/file_access_memory.h"
 
+#include "core/math/random_number_generator.h"
+
 //#define print_bl(m_what) print_line(m_what)
 #define print_bl(m_what) (void)(m_what)
 
@@ -89,6 +91,7 @@ enum {
 	OBJECT_EXTERNAL_RESOURCE = 1,
 	OBJECT_INTERNAL_RESOURCE = 2,
 	OBJECT_EXTERNAL_RESOURCE_INDEX = 3,
+	OBJECT_RANDOM_GENERATOR = 4,
 	//version 2: added 64 bits support for float and int
 	//version 3: changed nodepath encoding
 	FORMAT_VERSION = 3,
@@ -371,6 +374,11 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v) {
 						r_v = res;
 					}
 
+				} break;
+				case OBJECT_RANDOM_GENERATOR: {
+					RandomNumberGenerator *rng = memnew(RandomNumberGenerator);
+					rng->set_seed(f->get_64());
+					r_v = rng;
 				} break;
 				default: {
 
@@ -1510,6 +1518,15 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 			}
 
 			f->store_32(VARIANT_OBJECT);
+
+			if ((Object *)p_property && ((Object *)p_property)->get_class_name() == "RandomNumberGenerator") {
+				RandomNumberGenerator *rng = (RandomNumberGenerator *)(Object *)p_property;
+
+				f->store_32(OBJECT_RANDOM_GENERATOR);
+				f->store_64(rng->get_seed());
+				return;
+			}
+
 			RES res = p_property;
 			if (res.is_null()) {
 				f->store_32(OBJECT_EMPTY);

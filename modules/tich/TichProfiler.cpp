@@ -83,6 +83,8 @@ void TichProfiler::Update(uint64_t frameTime)
 
 		Performance *perf = Performance::get_singleton();
 
+		data.cpu = getCPUUsage(frameTime);
+
 		if ((sample % executionInterval) == 0)
 		{
 			OS *os = OS::get_singleton();
@@ -119,7 +121,6 @@ void TichProfiler::Update(uint64_t frameTime)
 		}
 
 		data.frameTime	= frameTime;
-		data.cpu		= getCPUUsage(frameTime);
 		data.memory		= Memory::get_mem_usage();
 		data.nodes		= perf->get_monitor(Performance::Monitor::OBJECT_NODE_COUNT);
 		data.objects	= perf->get_monitor(Performance::Monitor::OBJECT_COUNT);

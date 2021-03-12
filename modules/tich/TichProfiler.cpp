@@ -144,7 +144,7 @@ void TichProfiler::Update(uint64_t frameTime)
 			{
 				const ProfilerData &data = profilingData[i];
 
-				int exeutionTime = data.executionTime;
+				int exeutionTime = executionStack > i ? 0 : data.executionTime;
 				if (exeutionTime == 0)
 				{
 					for (int j = executionStack; j < profilingData.size(); j++)

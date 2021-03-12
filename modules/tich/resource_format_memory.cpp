@@ -376,7 +376,7 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v) {
 
 				} break;
 				case OBJECT_RANDOM_GENERATOR: {
-					RandomNumberGenerator *rng = memnew(RandomNumberGenerator);
+					Ref<RandomNumberGenerator> rng = (RandomNumberGenerator*)ClassDB::instance("RandomNumberGenerator");
 					rng->set_seed(f->get_64());
 					r_v = rng;
 				} break;

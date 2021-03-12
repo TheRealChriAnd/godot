@@ -134,16 +134,32 @@ void TichProfiler::Update(uint64_t frameTime)
 			Error err;
 			FileAccess *file = FileAccess::open(dataPath, FileAccess::WRITE, &err);
 
-			String headers = "Frame Time(us);Execution Time(us);CPU(%);Memory(bytes);State Size(bytes);Nodes;Objects\n";
+			String headers = "Frame Time(us);Execution Time(us);CPU(%);Memory(bytes);State Size(bytes);Nodes;Objects;Execution Time(us)\n";
 
 			file->store_string(headers);
 
+			int executionStack = 0;
 			String content;
 			for (int i = 0; i < profilingData.size(); i++)
 			{
 				const ProfilerData &data = profilingData[i];
 
-				content += itos(data.frameTime) + ";" + itos(data.executionTime) + ";" + rtos(data.cpu) + ";" + itos(data.memory) + ";" + itos(data.stateSize) + ";" + itos(data.nodes) + ";" + itos(data.objects) + "\n";
+				int exeutionTime = data.executionTime;
+				if (exeutionTime == 0)
+				{
+					for (int j = executionStack; j < profilingData.size(); j++)
+					{
+						if (profilingData[j].executionTime != 0)
+						{
+							exeutionTime = profilingData[j].executionTime;
+							executionStack = j;
+							break;
+						}
+					}
+				}
+				executionStack++;
+
+				content += itos(data.frameTime) + ";" + itos(data.executionTime) + ";" + rtos(data.cpu) + ";" + itos(data.memory) + ";" + itos(data.stateSize) + ";" + itos(data.nodes) + ";" + itos(data.objects) + ";" + (exeutionTime ? itos(exeutionTime) : "") + "\n";
 			}
 
 			file->store_string(content);

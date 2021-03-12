@@ -6,6 +6,9 @@
 
 #include "resource_format_memory.h"
 
+#include <thread>
+#include <windows.h>
+
 TichProfiler *TichProfiler::singleton = NULL;
 
 TichProfiler::TichProfiler() :
@@ -17,11 +20,59 @@ TichProfiler::TichProfiler() :
 	gaImplementation(true)
 {
 	singleton = this;
+
+	InitCPUCounter();
 }
 
 TichProfiler::~TichProfiler()
 {
 
+}
+
+void TichProfiler::InitCPUCounter()
+{
+	OS *os = OS::get_singleton();
+
+	handle = GetCurrentProcess();
+
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
+	int numProcessors = sysinfo.dwNumberOfProcessors / 2;
+
+	int cpuInfo[4] = { 0, 0, 0, 0 };
+	__cpuid(cpuInfo, 0);
+	if (cpuInfo[0] >= 0x16)
+	{
+		__cpuid(cpuInfo, 0x16);
+
+		os->print("EAX: 0x%08x EBX: 0x%08x ECX: %08x\r\n", cpuInfo[0], cpuInfo[1], cpuInfo[2]);
+		os->print("Processor Base Frequency:  %04d MHz\r\n", cpuInfo[0]);
+		os->print("Maximum Frequency:         %04d MHz\r\n", cpuInfo[1]);
+		os->print("Bus (Reference) Frequency: %04d MHz\r\n", cpuInfo[2]);
+		os->print("Cores %d\r\n", numProcessors);
+
+		cpuFrequency = cpuInfo[1];
+		cpuFrequency *= numProcessors;
+		cpuFrequency *= 1000000;
+	}
+	else
+	{
+		os->print("CPUID level 16h unsupported\r\n");
+	}
+}
+
+double TichProfiler::getCPUUsage(uint64_t deltaTime)
+{
+	uint64_t cycles;
+	QueryProcessCycleTime(handle, &cycles);
+	uint64_t deltaCycles = cycles - cyclesLast;
+	cyclesLast = cycles;
+
+	double deltaSeconds = deltaTime / (double)1000000;
+	double cyclesPerSecond = deltaCycles / deltaSeconds;
+	double percentage = cyclesPerSecond / (double)cpuFrequency;
+
+	return percentage * 100;
 }
 
 void TichProfiler::Update(uint64_t frameTime)
@@ -68,6 +119,7 @@ void TichProfiler::Update(uint64_t frameTime)
 		}
 
 		data.frameTime	= frameTime;
+		data.cpu		= getCPUUsage(frameTime);
 		data.memory		= Memory::get_mem_usage();
 		data.nodes		= perf->get_monitor(Performance::Monitor::OBJECT_NODE_COUNT);
 		data.objects	= perf->get_monitor(Performance::Monitor::OBJECT_COUNT);
@@ -82,7 +134,7 @@ void TichProfiler::Update(uint64_t frameTime)
 			Error err;
 			FileAccess *file = FileAccess::open(dataPath, FileAccess::WRITE, &err);
 
-			String headers = "Frame Time(us);Execution Time(us);Memory(bytes);State Size(bytes);Nodes;Objects\n";
+			String headers = "Frame Time(us);Execution Time(us);CPU(%);Memory(bytes);State Size(bytes);Nodes;Objects\n";
 
 			file->store_string(headers);
 
@@ -91,7 +143,7 @@ void TichProfiler::Update(uint64_t frameTime)
 			{
 				const ProfilerData &data = profilingData[i];
 
-				content += itos(data.frameTime) + ";" + itos(data.executionTime) + ";" + itos(data.memory) + ";" + itos(data.stateSize) + ";" + itos(data.nodes) + ";" + itos(data.objects) + "\n";
+				content += itos(data.frameTime) + ";" + itos(data.executionTime) + ";" + rtos(data.cpu) + ";" + itos(data.memory) + ";" + itos(data.stateSize) + ";" + itos(data.nodes) + ";" + itos(data.objects) + "\n";
 			}
 
 			file->store_string(content);
@@ -114,6 +166,8 @@ void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, bool save
 	this->dataPath = "data_" + String(gaImplementation ? "ga" : "gs") + "_" + String(save ? "save" : "load") + ".csv";
 
 	profilingData.clear();
+
+	getCPUUsage(0);
 
 	OS *os = OS::get_singleton();
 	timeStamp = os->get_ticks_usec();

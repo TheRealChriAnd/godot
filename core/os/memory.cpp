@@ -165,10 +165,8 @@ void Memory::free_static(void *p_ptr, bool p_pad_align) {
 	if (prepad) {
 		mem -= PAD_ALIGN;
 
-#ifdef DEBUG_ENABLED
 		uint64_t *s = (uint64_t *)mem;
 		atomic_sub(&mem_usage, *s);
-#endif
 
 		free(mem);
 	} else {

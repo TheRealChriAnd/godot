@@ -34,10 +34,10 @@
 #include "core/io/resource_loader.h"
 #include "core/message_queue.h"
 #include "core/print_string.h"
-#include "scene/main/instance_placeholder.h"
+#include "instance_placeholder.h"
 #include "scene/resources/packed_scene.h"
 #include "scene/scene_string_names.h"
-#include "scene/main/viewport.h"
+#include "viewport.h"
 
 #include "modules/tich/TichInfo.h"
 #include "modules/tich/TichSystem.h"
@@ -163,11 +163,13 @@ void Node::_notification(int p_notification) {
 
 					get_script_instance()->call_multilevel_reversed(SceneStringNames::get_singleton()->_ready, NULL, 0);
 				}
+#ifdef DEBUG_ENABLED
 				else
 				{
-					//get_script_instance()->call_multilevel_reversed("_tich_load", NULL, 0);
+					get_script_instance()->call_multilevel_reversed("_tich_load", NULL, 0);
 				}
-				get_script_instance()->call_multilevel_reversed("_test_load", NULL, 0);
+				get_script_instance()->call_multilevel_reversed("_tich_ready", NULL, 0);
+#endif
 			}
 
 		} break;

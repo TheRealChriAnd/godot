@@ -127,7 +127,7 @@ void TichProfiler::Update(uint64_t frameTime)
 		data.objects	= perf->get_monitor(Performance::Monitor::OBJECT_COUNT);
 		data.stateSize	= ResourceFormatSaverMemory::get_singleton()->get_state_size();
 
-		profilingData.push_back(data);
+		profilingData.set(index++, data);
 
 		sample = sample - 1;
 
@@ -186,7 +186,7 @@ void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, uint16_t 
 	_Directory dir;
 	dir.make_dir("data");
 
-	profilingData.clear();
+	profilingData.resize(samples);
 
 	getCPUUsage(0);
 

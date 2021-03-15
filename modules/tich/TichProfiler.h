@@ -36,6 +36,7 @@ private:
 	String dataPath;
 	bool save;
 	bool gaImplementation;
+	uint64_t index; 
 
 	void* handle;
 	uint64_t cyclesLast;

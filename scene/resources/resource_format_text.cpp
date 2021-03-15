@@ -1486,8 +1486,6 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 		packed_scene = p_resource;
 	}
 
-	String fileData;
-
 	Error err;
 	f = FileAccess::open(p_path, FileAccess::WRITE, &err);
 	ERR_FAIL_COND_V_MSG(err, ERR_CANT_OPEN, "Cannot save file '" + p_path + "'.");
@@ -1520,10 +1518,6 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 		}
 	}
 
-	/*
-	* writes the title [gd_scene load_steps=11 format=2]
-	*/
-
 	{
 		String title = packed_scene.is_valid() ? "[gd_scene " : "[gd_resource ";
 		if (packed_scene.is_null())
@@ -1540,9 +1534,6 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 			title += "load_steps=" + itos(load_steps) + " ";
 		}
 		title += "format=" + itos(FORMAT_VERSION) + "";
-
-		
-		fileData += title + "]\n";
 
 		f->store_string(title);
 		f->store_line("]\n"); //one empty line
@@ -1596,16 +1587,10 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 
 	sorted_er.sort();
 
-	/*
-	* Writes the external resource line [ext_resource path="res://icon.png" type="Texture" id=1]
-	*/
-
 	for (int i = 0; i < sorted_er.size(); i++) {
 		String p = sorted_er[i].resource->get_path();
 
-		String line = "[ext_resource path=\"" + p + "\" type=\"" + sorted_er[i].resource->get_save_class() + "\" id=" + itos(sorted_er[i].index) + "]\n";
-		fileData += line;
-		f->store_string(line); //bundled
+		f->store_string("[ext_resource path=\"" + p + "\" type=\"" + sorted_er[i].resource->get_save_class() + "\" id=" + itos(sorted_er[i].index) + "]\n"); //bundled
 	}
 
 	if (external_resources.size())
@@ -1637,12 +1622,7 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 		if (main && packed_scene.is_valid())
 			break; //save as a scene
 
-
-		/*
-		* Writes the sub resource line [sub_resource type="Shader" id=1]
-		*/
 		if (main) {
-			fileData += "[resource]";
 			f->store_line("[resource]");
 		} else {
 			String line = "[sub_resource ";
@@ -1658,9 +1638,6 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 
 			int idx = res->get_subindex();
 			line += "type=\"" + res->get_class() + "\" id=" + itos(idx);
-
-			fileData += line + "]";
-
 			f->store_line(line + "]");
 			if (takeover_paths) {
 				res->set_path(p_path + "::" + itos(idx), true);
@@ -1671,11 +1648,6 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 			res->set_edited(false);
 #endif
 		}
-
-
-		/*
-		* Writes the sub resource data line: shader = SubResource( 1 )
-		*/
 
 		List<PropertyInfo> property_list;
 		res->get_property_list(&property_list);
@@ -1710,10 +1682,7 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 
 				String vars;
 				VariantWriter::write_to_string(value, vars, _write_resources, this);
-
-				String line = name.property_name_encode() + " = " + vars + "\n";
-				fileData += line;
-				f->store_string(line);
+				f->store_string(name.property_name_encode() + " = " + vars + "\n");
 			}
 		}
 
@@ -1722,11 +1691,6 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 	}
 
 	if (packed_scene.is_valid()) {
-
-		/*
-		* Writes the node data
-		*/
-
 		//if this is a scene, save nodes and connections!
 		Ref<SceneState> state = packed_scene->get_state();
 		for (int i = 0; i < state->get_node_count(); i++) {
@@ -1765,52 +1729,32 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 				header += sgroups;
 			}
 
-
-			/*
-			* Writes the node header data line [node name="Player" type="KinematicBody2D" parent="."]
-			*/
-			fileData += header;
-
 			f->store_string(header);
 
 			if (instance_placeholder != String()) {
 
 				String vars;
-
-				fileData += " instance_placeholder=";
-
 				f->store_string(" instance_placeholder=");
 				VariantWriter::write_to_string(instance_placeholder, vars, _write_resources, this);
-				fileData += vars;
 				f->store_string(vars);
 			}
 
 			if (instance.is_valid()) {
 
 				String vars;
-				fileData += " instance=";
 				f->store_string(" instance=");
 				VariantWriter::write_to_string(instance, vars, _write_resources, this);
-				fileData += vars;
 				f->store_string(vars);
 			}
 
-			fileData += "]";
 			f->store_line("]");
-
-
-			/*
-			* Writes the node data line: value = 36
-			*/
 
 			for (int j = 0; j < state->get_node_property_count(i); j++) {
 
 				String vars;
 				VariantWriter::write_to_string(state->get_node_property_value(i, j), vars, _write_resources, this);
 
-				String line = String(state->get_node_property_name(i, j)).property_name_encode() + " = " + vars + "\n";
-				fileData += line;
-				f->store_string(line);
+				f->store_string(String(state->get_node_property_name(i, j)).property_name_encode() + " = " + vars + "\n");
 			}
 
 			if (i < state->get_node_count() - 1)
@@ -1830,22 +1774,18 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 			}
 
 			Array binds = state->get_connection_binds(i);
-			fileData += connstr;
 			f->store_string(connstr);
 			if (binds.size()) {
 				String vars;
 				VariantWriter::write_to_string(binds, vars, _write_resources, this);
-				fileData += " binds= " + vars;
 				f->store_string(" binds= " + vars);
 			}
 
-			fileData += "]";
 			f->store_line("]");
 		}
 
 		Vector<NodePath> editable_instances = state->get_editable_instances();
 		for (int i = 0; i < editable_instances.size(); i++) {
-			fileData += "\n[editable path=\"" + editable_instances[i].operator String() + "\"]";
 			f->store_line("\n[editable path=\"" + editable_instances[i].operator String() + "\"]");
 		}
 	}

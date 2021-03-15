@@ -39,7 +39,7 @@
 #include "core/print_string.h"
 #include "core/project_settings.h"
 #include "main/input_default.h"
-#include "scene/main/node.h"
+#include "node.h"
 #include "scene/debugger/script_debugger_remote.h"
 #include "scene/resources/dynamic_font.h"
 #include "scene/resources/material.h"
@@ -48,7 +48,7 @@
 #include "scene/scene_string_names.h"
 #include "servers/physics_2d_server.h"
 #include "servers/physics_server.h"
-#include "scene/main/viewport.h"
+#include "viewport.h"
 
 #include <stdio.h>
 

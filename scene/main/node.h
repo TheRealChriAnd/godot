@@ -37,7 +37,7 @@
 #include "core/object.h"
 #include "core/project_settings.h"
 #include "core/script_language.h"
-#include "scene_tree.h"
+#include "scene/main/scene_tree.h"
 
 class Viewport;
 class SceneState;

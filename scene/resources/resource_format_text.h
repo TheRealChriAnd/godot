@@ -31,11 +31,11 @@
 #ifndef RESOURCE_FORMAT_TEXT_H
 #define RESOURCE_FORMAT_TEXT_H
 
-#include "core/variant_parser.h"
 #include "core/io/resource_loader.h"
 #include "core/io/resource_saver.h"
 #include "core/os/file_access.h"
-#include "packed_scene.h"
+#include "core/variant_parser.h"
+#include "scene/resources/packed_scene.h"
 
 class ResourceInteractiveLoaderText : public ResourceInteractiveLoader {
 

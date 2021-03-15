@@ -183,6 +183,8 @@ void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, uint16_t 
 	uint16_t compl = complexityLevel;
 	this->dataPath = "data/" + String(gaImplementation ? "ga" : "gs") + "_" + String(save ? "save" : "load") + "_" + itos(complexityLevel) + ".csv";
 
+	index = 0;
+
 	_Directory dir;
 	dir.make_dir("data");
 

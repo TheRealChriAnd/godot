@@ -31,7 +31,7 @@
 #ifndef NODE2D_H
 #define NODE2D_H
 
-#include "canvas_item.h"
+#include "scene/2d/canvas_item.h"
 
 class Node2D : public CanvasItem {
 

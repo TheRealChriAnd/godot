@@ -3,6 +3,7 @@
 #include "TichSystem.h"
 #include "TichInfo.h"
 #include "core/os/os.h"
+#include "core/bind/core_bind.h"
 
 #include "resource_format_memory.h"
 
@@ -83,6 +84,8 @@ void TichProfiler::Update(uint64_t frameTime)
 
 		Performance *perf = Performance::get_singleton();
 
+		data.cpu = getCPUUsage(frameTime);
+
 		if ((sample % executionInterval) == 0)
 		{
 			OS *os = OS::get_singleton();
@@ -119,7 +122,6 @@ void TichProfiler::Update(uint64_t frameTime)
 		}
 
 		data.frameTime	= frameTime;
-		data.cpu		= getCPUUsage(frameTime);
 		data.memory		= Memory::get_mem_usage();
 		data.nodes		= perf->get_monitor(Performance::Monitor::OBJECT_NODE_COUNT);
 		data.objects	= perf->get_monitor(Performance::Monitor::OBJECT_COUNT);
@@ -173,13 +175,16 @@ void TichProfiler::Update(uint64_t frameTime)
 	}
 }
 
-void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, bool save, bool gaImplementation)
-{
+void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, uint16_t complexityLevel, bool save, bool gaImplementation) {
 	this->sample = samples;
 	this->save = save;
 	this->gaImplementation = gaImplementation;
 	this->executionInterval = executionInterval;
-	this->dataPath = "data_" + String(gaImplementation ? "ga" : "gs") + "_" + String(save ? "save" : "load") + ".csv";
+	uint16_t compl = complexityLevel;
+	this->dataPath = "data/" + String(gaImplementation ? "ga" : "gs") + "_" + String(save ? "save" : "load") + "_" + itos(complexityLevel) + ".csv";
+
+	_Directory dir;
+	dir.make_dir("data");
 
 	profilingData.clear();
 
@@ -187,16 +192,17 @@ void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, bool save
 
 	OS *os = OS::get_singleton();
 	timeStamp = os->get_ticks_usec();
-	os->print("Profiling started [Samples: %llu, Interval: %llu, Implementation: %s, Mode: %s]\n",
+	os->print("Profiling started [Samples: %llu, Interval: %hu, Implementation: %s, Mode: %s, Complexity: %hu ]\n",
 		samples,
 		executionInterval,
 		(gaImplementation ? "GA" : "GS"),
-		(save ? "Save" : "Load"));
+		(save ? "Save" : "Load")),
+		compl ;
 }
 
 void TichProfiler::StartGs(uint64_t samples, uint16_t executionInterval, bool save)
 {
-	Start(samples, executionInterval, save, false);
+	Start(samples, executionInterval, 1, save, false);
 }
 
 void TichProfiler::_bind_methods()
@@ -205,4 +211,5 @@ void TichProfiler::_bind_methods()
 
 	ADD_SIGNAL(MethodInfo("_save"));
 	ADD_SIGNAL(MethodInfo("_load"));
+	ADD_SIGNAL(MethodInfo("_change_level"));
 }

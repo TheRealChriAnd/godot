@@ -163,11 +163,13 @@ void Node::_notification(int p_notification) {
 
 					get_script_instance()->call_multilevel_reversed(SceneStringNames::get_singleton()->_ready, NULL, 0);
 				}
+#ifdef DEBUG_ENABLED
 				else
 				{
-					//get_script_instance()->call_multilevel_reversed("_tich_load", NULL, 0);
+					get_script_instance()->call_multilevel_reversed("_tich_load", NULL, 0);
 				}
-				get_script_instance()->call_multilevel_reversed("_test_load", NULL, 0);
+				get_script_instance()->call_multilevel_reversed("_tich_ready", NULL, 0);
+#endif
 			}
 
 		} break;

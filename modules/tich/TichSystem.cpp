@@ -26,6 +26,7 @@ TichSystem::TichSystem()
 {
 	s_Instance = this;
 	currentTreeVersion = 1;
+	currentComplexity = Complexity::LEVEL_2;
 	lastButtonStateF1 = false;
 	lastButtonStateF2 = false;
 }
@@ -48,6 +49,9 @@ void TichSystem::Update(uint64_t frameTime)
 	//Auto Ga
 	bool buttonStateF5 = input->is_key_pressed(KeyList::KEY_F5);
 	bool buttonStateF6 = input->is_key_pressed(KeyList::KEY_F6);
+
+	//Change Level Complexity
+	bool buttonStateF7 = input->is_key_pressed(KeyList::KEY_F7);
 
 	if (buttonStateF1)
 	{
@@ -84,28 +88,49 @@ void TichSystem::Update(uint64_t frameTime)
 	{
 		if (!lastButtonStateF3)
 		{
-			TichProfiler::get_singleton()->Start(600, 60, true, false);
+			TichProfiler::get_singleton()->Start(600, 60, currentComplexity, true, false);
 		}
 	}
 	else if (buttonStateF4) //Gs Load
 	{
 		if (!lastButtonStateF4)
 		{
-			TichProfiler::get_singleton()->Start(600, 60, false, false);
+			TichProfiler::get_singleton()->Start(600, 60, currentComplexity, false, false);
 		}
 	}
 	else if (buttonStateF5) //Ga Save
 	{
 		if (!lastButtonStateF5)
 		{
-			TichProfiler::get_singleton()->Start(600, 60, true, true);
+			TichProfiler::get_singleton()->Start(600, 60, currentComplexity, true, true);
 		}
 	}
 	else if (buttonStateF6) //GaLoad
 	{
 		if (!lastButtonStateF6)
 		{
-			TichProfiler::get_singleton()->Start(600, 60, false, true);
+			TichProfiler::get_singleton()->Start(600, 60, currentComplexity, false, true);
+		}
+	}
+
+	if (buttonStateF7) // change level
+	{
+		if (!lastButtonStateF7)
+		{
+			currentComplexity = (currentComplexity + 1) % 3;
+
+			switch (currentComplexity) {
+				case Complexity::LEVEL_1:
+					TichProfiler::get_singleton()->emit_signal("_change_level");
+					break;
+				case Complexity::LEVEL_2:
+					TichProfiler::get_singleton()->emit_signal("_change_level");
+					break;
+				case Complexity::LEVEL_3:
+					break;
+				default:
+					break;
+			}	
 		}
 	}
 
@@ -115,6 +140,7 @@ void TichSystem::Update(uint64_t frameTime)
 	lastButtonStateF4 = buttonStateF4;
 	lastButtonStateF5 = buttonStateF5;
 	lastButtonStateF6 = buttonStateF6;
+	lastButtonStateF7 = buttonStateF7;
 
 	if (currentTreeVersion != SceneTree::get_singleton()->get_tree_version())
 	{
@@ -124,6 +150,10 @@ void TichSystem::Update(uint64_t frameTime)
 	}
 
 	TichProfiler::get_singleton()->Update(frameTime);
+}
+
+void TichSystem::ChangeComplexity()
+{
 }
 
 bool TichSystem::Save()

@@ -48,7 +48,7 @@ public:
 
 	void Update(uint64_t frameTime);
 
-	void Start(uint64_t samples, uint16_t executionInterval, bool save, bool gaImplementation = true);
+	void Start(uint64_t samples, uint16_t executionInterval, uint16_t complexityLevel, bool save, bool gaImplementation = true);
 
 	double getCPUUsage(uint64_t deltaTime);
 

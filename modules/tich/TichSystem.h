@@ -6,6 +6,13 @@
 
 class ParallaxBackground;
 
+
+enum Complexity : uint16_t {
+	LEVEL_1,
+	LEVEL_2,
+	LEVEL_3
+};
+
 class TichSystem : public Reference
 {
 	friend class SceneTree;
@@ -14,6 +21,7 @@ public:
 	TichSystem();
 
 	void Update(uint64_t frameTime);
+	void ChangeComplexity();
 	bool Save();
 	bool Load();
 
@@ -37,7 +45,10 @@ private:
 	bool lastButtonStateF4;
 	bool lastButtonStateF5;
 	bool lastButtonStateF6;
+	bool lastButtonStateF7;
 	uint64_t currentTreeVersion;
+
+	uint16_t currentComplexity; 
 
 private:
 	Vector<ParallaxBackground*> parallaxBackgrounds;

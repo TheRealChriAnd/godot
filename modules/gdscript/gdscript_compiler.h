@@ -32,8 +32,8 @@
 #define GDSCRIPT_COMPILER_H
 
 #include "core/set.h"
-#include "modules/gdscript/gdscript.h"
-#include "modules/gdscript/gdscript_parser.h"
+#include "gdscript.h"
+#include "gdscript_parser.h"
 
 class GDScriptCompiler {
 

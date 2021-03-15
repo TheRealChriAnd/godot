@@ -30,7 +30,7 @@
 
 #include "gdscript_compiler.h"
 
-#include "modules/gdscript/gdscript.h"
+#include "gdscript.h"
 
 bool GDScriptCompiler::_is_class_member_property(CodeGen &codegen, const StringName &p_name) {
 

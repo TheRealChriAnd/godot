@@ -1829,11 +1829,15 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 		f->store_buffer(header, 4);
 	}
 
-	if (big_endian) {
+	if (big_endian)
+	{
 		f->store_32(1);
 		f->set_endian_swap(true);
-	} else
+	}
+	else
+	{
 		f->store_32(0);
+	}
 
 	f->store_32(0); //64 bits file, false for now
 	f->store_32(VERSION_MAJOR);
@@ -1847,7 +1851,9 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 	}
 
 	save_unicode_string(f, p_resource->get_class());
+
 	f->store_64(0); //offset to import metadata
+
 	for (int i = 0; i < 14; i++)
 		f->store_32(0); // reserved
 
@@ -1900,6 +1906,7 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 	}
 
 	f->store_32(strings.size()); //string table size
+
 	for (int i = 0; i < strings.size(); i++) {
 		save_unicode_string(f, strings[i]);
 		//WARN_PRINT(String("StringTable: " + strings[i]));
@@ -1907,6 +1914,7 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 
 	// save external resource table
 	f->store_32(external_resources.size()); //amount of external resources
+
 	Vector<RES> save_order;
 	save_order.resize(external_resources.size());
 
@@ -1924,6 +1932,7 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 	}
 	// save internal resource table
 	f->store_32(saved_resources.size()); //amount of internal resources
+
 	Vector<uint64_t> ofs_pos;
 	Set<int> used_indices;
 
@@ -1993,6 +2002,8 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 		}
 	}
 
+	bytesWritten = f->get_position();
+
 	for (int i = 0; i < ofs_table.size(); i++) {
 		f->seek(ofs_pos[i]);
 		f->store_64(ofs_table[i]);
@@ -2003,8 +2014,6 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 		memdelete(f);
 		return ERR_CANT_CREATE;
 	}
-
-	bytesWritten = f->get_position();
 
 	f->close();
 	memdelete(f);

@@ -102,15 +102,11 @@ void TichProfiler::Update(uint64_t frameTime)
 			{
 				if (save)
 				{
-					TichInfo::s_IsSaving = true;
 					emit_signal("_save");
-					TichInfo::s_IsSaving = false;
 				}
 				else
 				{
-					TichInfo::s_IsLoading = true;
 					emit_signal("_load");
-					TichInfo::s_IsLoading = false;
 				}	
 			}
 

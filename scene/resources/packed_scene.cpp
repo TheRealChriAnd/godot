@@ -41,6 +41,7 @@
 
 #include "scene/main/viewport.h"
 #include "modules/tich/TichInfo.h"
+#include "modules/tich/FunctionProfiler.h"
 
 #define PACKED_SCENE_VERSION 2
 
@@ -542,6 +543,8 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Nam
 	if (p_node != p_owner && p_node->get_owner() != p_owner && !p_owner->is_editable_instance(p_node->get_owner()))
 		return OK;
 
+	FUNCTION_PROFILER_BEGIN("SceneState::_parse_node() - Init");
+
 	// save the child instanced scenes that are chosen as editable, so they can be restored
 	// upon load back
 	if (p_node != p_owner && p_node->get_filename() != String() && p_owner->is_editable_instance(p_node))
@@ -633,12 +636,16 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Nam
 		}
 	}
 
+	FUNCTION_PROFILER_END("SceneState::_parse_node() - Init");
+	FUNCTION_PROFILER_BEGIN("SceneState::_parse_node() - Property");
 	// all setup, we then proceed to check all properties for the node
 	// and save the ones that are worth saving
 
+	FUNCTION_PROFILER_BEGIN("SceneState::_parse_node() - get_property_list");
 	List<PropertyInfo> plist;
 	p_node->get_property_list(&plist);
 	StringName type = p_node->get_class();
+	FUNCTION_PROFILER_END("SceneState::_parse_node() - get_property_list");
 
 
 	Variant value;
@@ -648,19 +655,27 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Nam
 
 	for (List<PropertyInfo>::Element *E = plist.front(); E; E = E->next())
 	{
-		if (!is_property_to_be_saved(p_node, E->get(), name, value, isExternalNode, isWeakRef))
+		FUNCTION_PROFILER_BEGIN("SceneState::_parse_node() - is_property_to_be_saved1");
+		bool save = is_property_to_be_saved(p_node, E->get(), name, value, isExternalNode, isWeakRef);
+		FUNCTION_PROFILER_END("SceneState::_parse_node() - is_property_to_be_saved1");
+		if (!save)
 			continue;
 
 		if (isExternalNode)
 		{
+			FUNCTION_PROFILER_BEGIN("SceneState::_parse_node() - _parse_external_node");
 			Error err = _parse_external_node(value, name, value, isWeakRef, externalNodes, name_map, variant_map, node_map);
+			FUNCTION_PROFILER_END("SceneState::_parse_node() - _parse_external_node");
 			if (err)
 				return err;
 		}
 
 		bool isDefault = is_default_value(type, p_node, value, name);
-	
-		if (!is_property_value_to_be_saved(pack_state_stack, E->get(), value, isDefault))
+
+		FUNCTION_PROFILER_BEGIN("SceneState::_parse_node() - is_property_to_be_saved2");
+		save = is_property_value_to_be_saved(pack_state_stack, E->get(), value, isDefault);
+		FUNCTION_PROFILER_END("SceneState::_parse_node() - is_property_to_be_saved2");
+		if (!save)
 			continue;
 
 		NodeData::Property prop;
@@ -669,6 +684,8 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Nam
 		nd.properties.push_back(prop);
 	}
 
+	FUNCTION_PROFILER_END("SceneState::_parse_node() - Property");
+	FUNCTION_PROFILER_BEGIN("SceneState::_parse_node() - Group");
 	// save the groups this node is into
 	// discard groups that come from the original scene
 
@@ -699,6 +716,9 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Nam
 
 		nd.groups.push_back(_nm_get_string(gi.name, name_map));
 	}
+
+	FUNCTION_PROFILER_END("SceneState::_parse_node() - Group");
+	FUNCTION_PROFILER_BEGIN("SceneState::_parse_node() - End");
 
 	// save the right owner
 	// for the saved scene root this is -1
@@ -765,6 +785,8 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Nam
 		parent_node = idx;
 		nodes.push_back(nd);
 	}
+
+	FUNCTION_PROFILER_END("SceneState::_parse_node() - End");
 
 	for (int i = 0; i < p_node->get_child_count(); i++) {
 
@@ -1188,6 +1210,7 @@ Error SceneState::_parse_connections(Node *p_owner, Node *p_node, NameMap &name_
 Error SceneState::pack(Node *p_scene) {
 	ERR_FAIL_NULL_V(p_scene, ERR_INVALID_PARAMETER);
 
+	FUNCTION_PROFILER_BEGIN("SceneState::pack() - Init");
 	clear();
 
 	Node *scene = p_scene;
@@ -1210,17 +1233,27 @@ Error SceneState::pack(Node *p_scene) {
 
 	Set<Node*> nodesOutsideTree;
 
+	FUNCTION_PROFILER_END("SceneState::pack() - Init");
+
+	FUNCTION_PROFILER_BEGIN("SceneState::pack() - Node");
 	Error err = _parse_node(scene, scene, -1, name_map, variant_map, node_map, nodepath_map, nodesOutsideTree);
 	if (err) {
 		clear();
 		ERR_FAIL_V(err);
 	}
 
+	FUNCTION_PROFILER_END("SceneState::pack() - Node");
+
+	FUNCTION_PROFILER_BEGIN("SceneState::pack() - Connection");
 	err = _parse_connections(scene, scene, name_map, variant_map, node_map, nodepath_map);
 	if (err) {
 		clear();
 		ERR_FAIL_V(err);
 	}
+
+	FUNCTION_PROFILER_END("SceneState::pack() - Connection");
+
+	FUNCTION_PROFILER_BEGIN("SceneState::pack() - End");
 
 	names.resize(name_map.size());
 
@@ -1242,6 +1275,8 @@ Error SceneState::pack(Node *p_scene) {
 
 		node_paths.write[E->get()] = scene->get_path_to(E->key());
 	}
+
+	FUNCTION_PROFILER_END("SceneState::pack() - End");
 
 	return OK;
 }

@@ -17,6 +17,8 @@
 #include "resource_format_memory.h"
 #include "TichProfiler.h"
 
+#include "FunctionProfiler.h"
+
 #define SAVE_FILE "res://saved.tich"
 //#define SAVE_FILE "res://saved.tscn"
 
@@ -164,15 +166,22 @@ bool TichSystem::Save()
 	TichInfo::s_IsSaving = true;
 	//WARN_PRINT("Saving");
 
+	FUNCTION_PROFILER_BEGIN("OnPreSave()");
 	OnPreSave();
+	FUNCTION_PROFILER_END("OnPreSave()");
 
 	Ref<PackedScene> packedScene;
 	packedScene.instance();
 
 	Node *scene = SceneTree::get_singleton()->get_root();
-	Error result = packedScene->pack(scene);
 
+	FUNCTION_PROFILER_BEGIN("packedScene->pack()");
+	Error result = packedScene->pack(scene);
+	FUNCTION_PROFILER_END("packedScene->pack()");
+
+	FUNCTION_PROFILER_BEGIN("OnPostSave()");
 	OnPostSave();
+	FUNCTION_PROFILER_END("OnPostSave()");
 
 	if (result != Error::OK)
 	{
@@ -181,7 +190,9 @@ bool TichSystem::Save()
 		return false;
 	}
 
+	FUNCTION_PROFILER_BEGIN("ResourceSaver::save()");
 	result = ResourceSaver::save(SAVE_FILE, packedScene);
+	FUNCTION_PROFILER_END("ResourceSaver::save()");
 
 	if (result != Error::OK)
 	{
@@ -193,6 +204,9 @@ bool TichSystem::Save()
 	//WARN_PRINT("Scene Saved Successfully");
 
 	TichInfo::s_IsSaving = false;
+
+	FUNCTION_PROFILER_SAVE();
+
 	return true;
 }
 

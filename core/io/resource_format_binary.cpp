@@ -37,6 +37,10 @@
 #include "core/project_settings.h"
 #include "core/version.h"
 
+#include "core/io/file_access_memory.h"
+
+#include "modules/tich/TichInfo.h"
+
 //#define print_bl(m_what) print_line(m_what)
 #define print_bl(m_what) (void)(m_what)
 
@@ -993,7 +997,18 @@ Ref<ResourceInteractiveLoader> ResourceFormatLoaderBinary::load_interactive(cons
 		*r_error = ERR_FILE_CANT_OPEN;
 
 	Error err;
-	FileAccess *f = FileAccess::open(p_path, FileAccess::READ, &err);
+	FileAccess *f = NULL;
+
+	if (TichInfo::IsLoading())
+	{
+		FileAccessMemory *file = memnew(FileAccessMemory);
+		err = file->_open("data", FileAccess::READ);
+		f = file;
+	}
+	else
+	{
+		f = FileAccess::open(p_path, FileAccess::READ, &err);
+	}
 
 	ERR_FAIL_COND_V_MSG(err != OK, Ref<ResourceInteractiveLoader>(), "Cannot open file '" + p_path + "'.");
 
@@ -1763,7 +1778,17 @@ Error ResourceFormatSaverBinaryInstance::save(const String &p_path, const RES &p
 			memdelete(f);
 
 	} else {
-		f = FileAccess::open(p_path, FileAccess::WRITE, &err);
+
+		if (TichInfo::IsSaving)
+		{
+			FileAccessMemory *file = memnew(FileAccessMemory);
+			err = file->_open("data", FileAccess::WRITE);
+			f = file;
+		}
+		else
+		{
+			f = FileAccess::open(p_path, FileAccess::WRITE, &err);
+		}
 	}
 
 	ERR_FAIL_COND_V_MSG(err != OK, err, "Cannot create file '" + p_path + "'.");
@@ -1943,6 +1968,8 @@ Error ResourceFormatSaverBinaryInstance::save(const String &p_path, const RES &p
 		}
 	}
 
+	ResourceFormatSaverBinary::singleton->m_Bytes = f->get_position();
+
 	for (int i = 0; i < ofs_table.size(); i++) {
 		f->seek(ofs_pos[i]);
 		f->store_64(ofs_table[i]);
@@ -1982,6 +2009,11 @@ void ResourceFormatSaverBinary::get_recognized_extensions(const RES &p_resource,
 	p_extensions->push_back(base);
 	if (base != "res")
 		p_extensions->push_back("res");
+}
+
+uint64_t ResourceFormatSaverBinary::get_state_size()
+{
+	return m_Bytes;
 }
 
 ResourceFormatSaverBinary *ResourceFormatSaverBinary::singleton = NULL;

@@ -81,8 +81,6 @@ class ResourceInteractiveLoaderMemory : public ResourceInteractiveLoader {
 	friend class ResourceFormatLoaderMemory;
 
 	Error parse_variant(Variant &r_v);
-	Error parse_variant_optimal(Variant &r_v);
-	Error parse(Variant &r_v, uint32_t type);
 
 public:
 	virtual void set_local_path(const String &p_local_path);
@@ -153,7 +151,6 @@ class ResourceFormatSaverMemoryInstance {
 
 	static void _pad_buffer(FileAccess *f, int p_bytes);
 	void _write_variant(const Variant &p_property, const PropertyInfo &p_hint = PropertyInfo());
-	void _write_variant_optimal(const Variant &p_property, const PropertyInfo &p_hint = PropertyInfo());
 	void _find_resources(const Variant &p_variant, bool p_main = false);
 	static void save_unicode_string(FileAccess *f, const String &p_string, bool p_bit_on_len = false);
 	int get_string_index(const String &p_string);
@@ -161,10 +158,13 @@ class ResourceFormatSaverMemoryInstance {
 public:
 	Error save(const String &p_path, const RES &p_resource, uint64_t &bytesWritten, uint32_t p_flags = 0);
 	static void write_variant(FileAccess *f, const Variant &p_property, Set<RES> &resource_set, Map<RES, int> &external_resources, Map<StringName, int> &string_map, const PropertyInfo &p_hint = PropertyInfo());
-	static void write_variant_optimal(FileAccess *f, const Variant &p_property, Set<RES> &resource_set, Map<RES, int> &external_resources, Map<StringName, int> &string_map, const PropertyInfo &p_hint = PropertyInfo());
 };
 
-class ResourceFormatSaverMemory : public ResourceFormatSaver {
+class ResourceFormatSaverMemory : public ResourceFormatSaver
+{
+	friend ResourceFormatSaverMemoryInstance;
+	friend ResourceInteractiveLoaderMemory;
+
 public:
 	static ResourceFormatSaverMemory *singleton;
 	static ResourceFormatSaverMemory *get_singleton() { return singleton; };
@@ -177,7 +177,9 @@ public:
 	ResourceFormatSaverMemory();
 
 private:
-	uint64_t bytes;
+	uint64_t m_Bytes;
+	Map<String, int> m_StringTable;
+	Vector<Map<String, int>::Element *> m_StringElements;
 };
 
 #endif // RESOURCE_FORMAT_MEMORY_H

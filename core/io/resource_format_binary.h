@@ -160,14 +160,23 @@ public:
 	static void write_variant(FileAccess *f, const Variant &p_property, Set<RES> &resource_set, Map<RES, int> &external_resources, Map<StringName, int> &string_map, const PropertyInfo &p_hint = PropertyInfo());
 };
 
-class ResourceFormatSaverBinary : public ResourceFormatSaver {
+class ResourceFormatSaverBinary : public ResourceFormatSaver
+{
+	friend ResourceFormatSaverBinaryInstance;
+
 public:
 	static ResourceFormatSaverBinary *singleton;
+	static ResourceFormatSaverBinary *get_singleton() { return singleton; };
 	virtual Error save(const String &p_path, const RES &p_resource, uint32_t p_flags = 0);
 	virtual bool recognize(const RES &p_resource) const;
 	virtual void get_recognized_extensions(const RES &p_resource, List<String> *p_extensions) const;
 
+	uint64_t get_state_size();
+
 	ResourceFormatSaverBinary();
+
+private:
+	uint64_t m_Bytes;
 };
 
 #endif // RESOURCE_FORMAT_BINARY_H

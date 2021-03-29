@@ -6,6 +6,7 @@
 #include "core/bind/core_bind.h"
 
 #include "resource_format_memory.h"
+#include "core/io/resource_format_binary.h"
 
 #include <thread>
 #include <windows.h>
@@ -120,7 +121,11 @@ void TichProfiler::Update(uint64_t frameTime)
 		data.memory		= Memory::get_mem_usage();
 		data.nodes		= perf->get_monitor(Performance::Monitor::OBJECT_NODE_COUNT);
 		data.objects	= perf->get_monitor(Performance::Monitor::OBJECT_COUNT);
-		data.stateSize	= ResourceFormatSaverMemory::get_singleton()->get_state_size();
+
+		if (TichInfo::IsGA())
+			data.stateSize	= ResourceFormatSaverMemory::get_singleton()->get_state_size();
+		else
+			data.stateSize = ResourceFormatSaverBinary::get_singleton()->get_state_size();
 
 		profilingData.set(index++, data);
 

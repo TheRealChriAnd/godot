@@ -111,25 +111,6 @@ void ResourceInteractiveLoaderMemory::_advance_padding(uint32_t p_len) {
 	}
 }
 
-StringName ResourceInteractiveLoaderMemory::_get_string() {
-
-	uint32_t id = f->get_32();
-	if (id & 0x80000000) {
-		uint32_t len = id & 0x7FFFFFFF;
-		if ((int)len > str_buf.size()) {
-			str_buf.resize(len);
-		}
-		if (len == 0)
-			return StringName();
-		f->get_buffer((uint8_t *)&str_buf[0], len);
-		String s;
-		s.parse_utf8(&str_buf[0]);
-		return s;
-	}
-
-	return string_map[id];
-}
-
 Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v)
 {
 	uint8_t type = f->get_8();
@@ -289,26 +270,7 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v)
 
 		case VARIANT_NODE_PATH: {
 
-			Vector<StringName> names;
-			Vector<StringName> subnames;
-			bool absolute;
-
-			int name_count = f->get_16();
-			uint32_t subname_count = f->get_16();
-			absolute = subname_count & 0x8000;
-			subname_count &= 0x7FFF;
-			if (ver_format < FORMAT_VERSION_NO_NODEPATH_PROPERTY) {
-				subname_count += 1; // has a property field, so we should count it as well
-			}
-
-			for (int i = 0; i < name_count; i++)
-				names.push_back(_get_string());
-			for (uint32_t i = 0; i < subname_count; i++)
-				subnames.push_back(_get_string());
-
-			NodePath np = NodePath(names, subnames, absolute);
-
-			r_v = np;
+			r_v = NodePath(get_unicode_string());
 
 		} break;
 		case VARIANT_RID: {
@@ -756,7 +718,7 @@ Error ResourceInteractiveLoaderMemory::poll() {
 
 	for (int i = 0; i < pc; i++)
 	{
-		StringName name = _get_string();
+		StringName name = get_unicode_string();
 
 		if (name == StringName()) {
 			error = ERR_FILE_CORRUPT;
@@ -836,69 +798,10 @@ void ResourceInteractiveLoaderMemory::open(FileAccess *p_f) {
 	error = OK;
 
 	f = p_f;
-	uint8_t header[4];
-	f->get_buffer(header, 4);
-	if (header[0] == 'R' && header[1] == 'S' && header[2] == 'C' && header[3] == 'C') {
-		// Compressed.
-		FileAccessCompressed *fac = memnew(FileAccessCompressed);
-		error = fac->open_after_magic(f);
-		if (error != OK) {
-			memdelete(fac);
-			f->close();
-			ERR_FAIL_MSG("Failed to open Memory resource file: " + local_path + ".");
-		}
-		f = fac;
-
-	} else if (header[0] != 'R' || header[1] != 'S' || header[2] != 'R' || header[3] != 'C') {
-		// Not normal.
-		error = ERR_FILE_UNRECOGNIZED;
-		f->close();
-		ERR_FAIL_MSG("Unrecognized Memory resource file: " + local_path + ".");
-	}
-
-	bool big_endian = f->get_32();
-	bool use_real64 = f->get_32();
-
-	f->set_endian_swap(big_endian != 0); //read big endian if saved as big endian
-
-	uint32_t ver_major = f->get_32();
-	uint32_t ver_minor = f->get_32();
-	ver_format = f->get_32();
-
-	print_bl("big endian: " + itos(big_endian));
-#ifdef BIG_ENDIAN_ENABLED
-	print_bl("endian swap: " + itos(!big_endian));
-#else
-	print_bl("endian swap: " + itos(big_endian));
-#endif
-	print_bl("real64: " + itos(use_real64));
-	print_bl("major: " + itos(ver_major));
-	print_bl("minor: " + itos(ver_minor));
-	print_bl("format: " + itos(ver_format));
-
-	if (ver_format > FORMAT_VERSION || ver_major > VERSION_MAJOR) {
-
-		f->close();
-		ERR_FAIL_MSG("File format '" + itos(FORMAT_VERSION) + "." + itos(ver_major) + "." + itos(ver_minor) + "' is too new! Please upgrade to a new engine version: " + local_path + ".");
-	}
-
-	type = get_unicode_string();
-
-	print_bl("type: " + type);
 
 	importmd_ofs = f->get_64();
 	for (int i = 0; i < 14; i++)
 		f->get_32(); //skip a few reserved fields
-
-	uint32_t string_table_size = f->get_32();
-	string_map.resize(string_table_size);
-	for (uint32_t i = 0; i < string_table_size; i++) {
-
-		StringName s = get_unicode_string();
-		string_map.write[i] = s;
-	}
-
-	print_bl("strings: " + itos(string_table_size));
 
 	uint32_t ext_resources_size = f->get_32();
 	for (uint32_t i = 0; i < ext_resources_size; i++) {
@@ -1087,10 +990,10 @@ void ResourceFormatSaverMemoryInstance::_pad_buffer(FileAccess *f, int p_bytes) 
 
 void ResourceFormatSaverMemoryInstance::_write_variant(const Variant &p_property, const PropertyInfo &p_hint) {
 
-	write_variant(f, p_property, resource_set, external_resources, string_map, p_hint);
+	write_variant(f, p_property, resource_set, external_resources, p_hint);
 }
 
-void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Variant &p_property, Set<RES> &resource_set, Map<RES, int> &external_resources, Map<StringName, int> &string_map, const PropertyInfo &p_hint) {
+void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Variant &p_property, Set<RES> &resource_set, Map<RES, int> &external_resources, const PropertyInfo &p_hint) {
 
 	switch (p_property.get_type()) {
 
@@ -1262,25 +1165,8 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 		case Variant::NODE_PATH: {
 			f->store_8(VARIANT_NODE_PATH);
 			NodePath np = p_property;
-			f->store_16(np.get_name_count());
-			uint16_t snc = np.get_subname_count();
-			if (np.is_absolute())
-				snc |= 0x8000;
-			f->store_16(snc);
-			for (int i = 0; i < np.get_name_count(); i++) {
-				if (string_map.has(np.get_name(i))) {
-					f->store_32(string_map[np.get_name(i)]);
-				} else {
-					save_unicode_string(f, np.get_name(i), true);
-				}
-			}
-			for (int i = 0; i < np.get_subname_count(); i++) {
-				if (string_map.has(np.get_subname(i))) {
-					f->store_32(string_map[np.get_subname(i)]);
-				} else {
-					save_unicode_string(f, np.get_subname(i), true);
-				}
-			}
+
+			save_unicode_string(f, np);
 
 		} break;
 		case Variant::_RID: {
@@ -1349,8 +1235,8 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 					continue;
 				*/
 
-				write_variant(f, E->get(), resource_set, external_resources, string_map);
-				write_variant(f, d[E->get()], resource_set, external_resources, string_map);
+				write_variant(f, E->get(), resource_set, external_resources);
+				write_variant(f, d[E->get()], resource_set, external_resources);
 			}
 
 		} break;
@@ -1361,7 +1247,7 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 			f->store_32(uint32_t(a.size()));
 			for (int i = 0; i < a.size(); i++) {
 
-				write_variant(f, a[i], resource_set, external_resources, string_map);
+				write_variant(f, a[i], resource_set, external_resources);
 			}
 
 		} break;
@@ -1541,9 +1427,9 @@ void ResourceFormatSaverMemoryInstance::_find_resources(const Variant &p_variant
 			//take the chance and save node path strings
 			NodePath np = p_variant;
 			for (int i = 0; i < np.get_name_count(); i++)
-				get_string_index(np.get_name(i));
+				add_unicode_string(np.get_name(i));
 			for (int i = 0; i < np.get_subname_count(); i++)
-				get_string_index(np.get_subname(i));
+				add_unicode_string(np.get_subname(i));
 
 		} break;
 		default: {
@@ -1553,6 +1439,11 @@ void ResourceFormatSaverMemoryInstance::_find_resources(const Variant &p_variant
 
 void ResourceFormatSaverMemoryInstance::save_unicode_string(FileAccess *f, const String &p_string, bool p_bit_on_len) {
 
+	f->store_16(add_unicode_string(p_string));
+}
+
+int ResourceFormatSaverMemoryInstance::add_unicode_string(const String &p_string)
+{
 	ResourceFormatSaverMemory *saver = ResourceFormatSaverMemory::get_singleton();
 
 	Map<String, int>::Element *e = saver->m_StringTable.find(p_string);
@@ -1561,49 +1452,26 @@ void ResourceFormatSaverMemoryInstance::save_unicode_string(FileAccess *f, const
 	{
 		int index = saver->m_StringElements.size();
 		saver->m_StringElements.push_back(saver->m_StringTable.insert(p_string, index));
-		f->store_16(index);
+		return index;
 	}
 	else
 	{
-		f->store_16(e->value());
+		return e->value();
 	}
-}
-
-int ResourceFormatSaverMemoryInstance::get_string_index(const String &p_string) {
-
-	StringName s = p_string;
-	if (string_map.has(s))
-		return string_map[s];
-
-	string_map[s] = strings.size();
-	strings.push_back(s);
-	return strings.size() - 1;
 }
 
 Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p_resource, uint64_t &bytesWritten, uint32_t p_flags) {
 
 	Error err;
-	if (p_flags & ResourceSaver::FLAG_COMPRESS) {
-		FileAccessCompressed *fac = memnew(FileAccessCompressed);
-		fac->configure("RSCC");
-		f = fac;
-		err = fac->_open(p_path, FileAccess::WRITE);
-		if (err)
-			memdelete(f);
-
-	} else {
-		//f = FileAccess::open(p_path, FileAccess::WRITE, &err);
-		FileAccessMemory* file = memnew(FileAccessMemory);
-		err = file->_open("data", FileAccess::WRITE);
-		f = file;
-	}
+	FileAccessMemory *file = memnew(FileAccessMemory);
+	err = file->_open("data", FileAccess::WRITE);
+	f = file;
 
 	ERR_FAIL_COND_V_MSG(err != OK, err, "Cannot create file '" + p_path + "'.");
 
 	relative_paths = p_flags & ResourceSaver::FLAG_RELATIVE_PATHS;
 	skip_editor = p_flags & ResourceSaver::FLAG_OMIT_EDITOR_PROPERTIES;
 	bundle_resources = p_flags & ResourceSaver::FLAG_BUNDLE_RESOURCES;
-	big_endian = p_flags & ResourceSaver::FLAG_SAVE_BIG_ENDIAN;
 	takeover_paths = p_flags & ResourceSaver::FLAG_REPLACE_SUBRESOURCE_PATHS;
 
 	if (!p_path.begins_with("res://"))
@@ -1613,35 +1481,6 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 	path = ProjectSettings::get_singleton()->localize_path(p_path);
 
 	_find_resources(p_resource, true);
-
-	if (!(p_flags & ResourceSaver::FLAG_COMPRESS)) {
-		//save header compressed
-		static const uint8_t header[4] = { 'R', 'S', 'R', 'C' };
-		f->store_buffer(header, 4);
-	}
-
-	if (big_endian)
-	{
-		f->store_32(1);
-		f->set_endian_swap(true);
-	}
-	else
-	{
-		f->store_32(0);
-	}
-
-	f->store_32(0); //64 bits file, false for now
-	f->store_32(VERSION_MAJOR);
-	f->store_32(VERSION_MINOR);
-	f->store_32(FORMAT_VERSION);
-
-	if (f->get_error() != OK && f->get_error() != ERR_FILE_EOF) {
-		f->close();
-		memdelete(f);
-		return ERR_CANT_CREATE;
-	}
-
-	save_unicode_string(f, p_resource->get_class());
 
 	f->store_64(0); //offset to import metadata
 
@@ -1669,7 +1508,7 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 				if ((F->get().usage & PROPERTY_USAGE_STORAGE)) {
 					Property p;
 					//WARN_PRINT(String("PROP: " + F->get().name));
-					p.name_idx = get_string_index(F->get().name);
+					p.name_idx = add_unicode_string(F->get().name);
 
 					if (F->get().usage & PROPERTY_USAGE_RESOURCE_NOT_PERSISTENT) {
 						NonPersistentKey npk;
@@ -1694,13 +1533,6 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 				}
 			}
 		}
-	}
-
-	f->store_32(strings.size()); //string table size
-
-	for (int i = 0; i < strings.size(); i++) {
-		save_unicode_string(f, strings[i]);
-		//WARN_PRINT(String("StringTable: " + strings[i]));
 	}
 
 	// save external resource table
@@ -1774,46 +1606,22 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 
 	Vector<uint64_t> ofs_table;
 
-	if (TichInfo::IsGA())
-	{
-		//now actually save the resources
-		for (List<ResourceData>::Element *E = resources.front(); E; E = E->next()) {
+	//now actually save the resources
+	for (List<ResourceData>::Element *E = resources.front(); E; E = E->next()) {
 
-			ResourceData &rd = E->get();
+		ResourceData &rd = E->get();
 
-			ofs_table.push_back(f->get_position());
-			save_unicode_string(f, rd.type);
-			//WARN_PRINT(String("RES_Table: ") + rd.type);
-			f->store_32(rd.properties.size());
+		ofs_table.push_back(f->get_position());
+		save_unicode_string(f, rd.type);
+		//WARN_PRINT(String("RES_Table: ") + rd.type);
+		f->store_32(rd.properties.size());
 
-			for (List<Property>::Element *F = rd.properties.front(); F; F = F->next()) {
+		for (List<Property>::Element *F = rd.properties.front(); F; F = F->next()) {
 
-				Property &p = F->get();
-				f->store_32(p.name_idx);
-				_write_variant(p.value, F->get().pi);
-				//WARN_PRINT(String("PROP: ") + strings[p.name_idx] + " | " + p.value);
-			}
-		}
-	}
-	else
-	{
-		//now actually save the resources
-		for (List<ResourceData>::Element *E = resources.front(); E; E = E->next()) {
-
-			ResourceData &rd = E->get();
-
-			ofs_table.push_back(f->get_position());
-			save_unicode_string(f, rd.type);
-			//WARN_PRINT(String("RES_Table: ") + rd.type);
-			f->store_32(rd.properties.size());
-
-			for (List<Property>::Element *F = rd.properties.front(); F; F = F->next()) {
-
-				Property &p = F->get();
-				f->store_32(p.name_idx);
-				_write_variant(p.value, F->get().pi);
-				//WARN_PRINT(String("PROP: ") + strings[p.name_idx] + " | " + p.value);
-			}
+			Property &p = F->get();
+			f->store_16(p.name_idx);
+			_write_variant(p.value, F->get().pi);
+			//WARN_PRINT(String("PROP: ") + strings[p.name_idx] + " | " + p.value);
 		}
 	}
 	

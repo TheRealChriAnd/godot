@@ -17,8 +17,7 @@ TichProfiler::TichProfiler() :
 	timeStamp(0),
 	sample(0),
 	executionInterval(0),
-	save(false),
-	gaImplementation(true)
+	save(false)
 {
 	singleton = this;
 
@@ -91,7 +90,7 @@ void TichProfiler::Update(uint64_t frameTime)
 			OS *os = OS::get_singleton();
 			uint64_t time = os->get_ticks_usec();
 
-			if (gaImplementation)
+			if (TichInfo::IsGA())
 			{
 				if (save)
 					TichSystem::GetInstance()->Save();
@@ -174,7 +173,7 @@ void TichProfiler::Update(uint64_t frameTime)
 void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, uint16_t complexityLevel, bool save, bool gaImplementation) {
 	this->sample = samples;
 	this->save = save;
-	this->gaImplementation = gaImplementation;
+	TichInfo::s_IsGA = gaImplementation;
 	this->executionInterval = executionInterval;
 	uint16_t compl = complexityLevel;
 	this->dataPath = "data/" + String(gaImplementation ? "ga" : "gs") + "_" + String(save ? "save" : "load") + "_" + itos(complexityLevel) + ".csv";

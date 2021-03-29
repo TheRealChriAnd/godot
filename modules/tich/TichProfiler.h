@@ -35,7 +35,6 @@ private:
 	uint16_t executionInterval;
 	String dataPath;
 	bool save;
-	bool gaImplementation;
 	uint64_t index; 
 
 	void* handle;

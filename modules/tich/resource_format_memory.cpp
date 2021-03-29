@@ -43,6 +43,8 @@
 
 #include "core/math/random_number_generator.h"
 
+#include "TichInfo.h"
+
 //#define print_bl(m_what) print_line(m_what)
 #define print_bl(m_what) (void)(m_what)
 
@@ -128,9 +130,18 @@ StringName ResourceInteractiveLoaderMemory::_get_string() {
 	return string_map[id];
 }
 
-Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v) {
+Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v)
+{
+	return parse(r_v, f->get_32());
+}
 
-	uint32_t type = f->get_32();
+Error ResourceInteractiveLoaderMemory::parse_variant_optimal(Variant &r_v)
+{
+	return parse(r_v, f->get_8());
+}
+
+Error ResourceInteractiveLoaderMemory::parse(Variant &r_v, uint32_t type)
+{
 	print_bl("find property of type: " + itos(type));
 
 	switch (type) {
@@ -139,9 +150,16 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v) {
 
 			r_v = Variant();
 		} break;
-		case VARIANT_BOOL: {
+		case (VARIANT_BOOL | 128): {
 
-			r_v = bool(f->get_32());
+			r_v = true;
+		} break;
+		case (VARIANT_BOOL): {
+
+			if (TichInfo::IsGA())
+				r_v = false;
+			else
+				r_v = bool(f->get_32());
 		} break;
 		case VARIANT_INT: {
 
@@ -270,10 +288,22 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v) {
 		case VARIANT_COLOR: {
 
 			Color v;
-			v.r = f->get_real();
-			v.g = f->get_real();
-			v.b = f->get_real();
-			v.a = f->get_real();
+			if (TichInfo::IsGA())
+			{
+				uint32_t color = f->get_32();
+				uint8_t *rgba = (uint8_t *)&color;
+				v.r = (float)rgba[0] / 255.0f;
+				v.g = (float)rgba[1] / 255.0f;
+				v.b = (float)rgba[2] / 255.0f;
+				v.a = (float)rgba[3] / 255.0f;
+			}
+			else
+			{
+				v.r = f->get_real();
+				v.g = f->get_real();
+				v.b = f->get_real();
+				v.a = f->get_real();
+			}
 			r_v = v;
 
 		} break;
@@ -308,7 +338,7 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v) {
 		} break;
 		case VARIANT_OBJECT: {
 
-			uint32_t objtype = f->get_32();
+			uint32_t objtype = TichInfo::IsGA() ? f->get_8() : f->get_32();
 
 			switch (objtype) {
 
@@ -394,10 +424,11 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v) {
 			len &= 0x7FFFFFFF;
 			for (uint32_t i = 0; i < len; i++) {
 				Variant key;
-				Error err = parse_variant(key);
+				Error err = TichInfo::IsGA() ? parse_variant_optimal(key) : parse_variant(key);
+
 				ERR_FAIL_COND_V_MSG(err, ERR_FILE_CORRUPT, "Error when trying to parse Variant.");
 				Variant value;
-				err = parse_variant(value);
+				err = err = TichInfo::IsGA() ? parse_variant_optimal(value) : parse_variant(value);
 				ERR_FAIL_COND_V_MSG(err, ERR_FILE_CORRUPT, "Error when trying to parse Variant.");
 				d[key] = value;
 			}
@@ -411,7 +442,7 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v) {
 			a.resize(len);
 			for (uint32_t i = 0; i < len; i++) {
 				Variant val;
-				Error err = parse_variant(val);
+				Error err = TichInfo::IsGA() ? parse_variant_optimal(val) : parse_variant(val);
 				ERR_FAIL_COND_V_MSG(err, ERR_FILE_CORRUPT, "Error when trying to parse Variant.");
 				a[i] = val;
 			}
@@ -744,23 +775,47 @@ Error ResourceInteractiveLoaderMemory::poll() {
 
 	//set properties
 
-	for (int i = 0; i < pc; i++) {
+	if (TichInfo::IsGA())
+	{
+		for (int i = 0; i < pc; i++)
+		{
+			StringName name = _get_string();
 
-		StringName name = _get_string();
+			if (name == StringName()) {
+				error = ERR_FILE_CORRUPT;
+				ERR_FAIL_V(ERR_FILE_CORRUPT);
+			}
 
-		if (name == StringName()) {
-			error = ERR_FILE_CORRUPT;
-			ERR_FAIL_V(ERR_FILE_CORRUPT);
+			Variant value;
+
+			error = parse_variant_optimal(value);
+			if (error)
+				return error;
+
+			res->set(name, value);
 		}
-
-		Variant value;
-
-		error = parse_variant(value);
-		if (error)
-			return error;
-
-		res->set(name, value);
 	}
+	else
+	{
+		for (int i = 0; i < pc; i++)
+		{
+			StringName name = _get_string();
+
+			if (name == StringName()) {
+				error = ERR_FILE_CORRUPT;
+				ERR_FAIL_V(ERR_FILE_CORRUPT);
+			}
+
+			Variant value;
+
+			error = parse_variant(value);
+			if (error)
+				return error;
+
+			res->set(name, value);
+		}
+	}
+
 #ifdef TOOLS_ENABLED
 	res->set_edited(false);
 #endif
@@ -1304,6 +1359,381 @@ void ResourceFormatSaverMemoryInstance::_write_variant(const Variant &p_property
 	write_variant(f, p_property, resource_set, external_resources, string_map, p_hint);
 }
 
+void ResourceFormatSaverMemoryInstance::_write_variant_optimal(const Variant &p_property, const PropertyInfo &p_hint) {
+
+	write_variant_optimal(f, p_property, resource_set, external_resources, string_map, p_hint);
+}
+
+void ResourceFormatSaverMemoryInstance::write_variant_optimal(FileAccess *f, const Variant &p_property, Set<RES> &resource_set, Map<RES, int> &external_resources, Map<StringName, int> &string_map, const PropertyInfo &p_hint) {
+
+	switch (p_property.get_type()) {
+
+		case Variant::NIL: {
+
+			f->store_8(VARIANT_NIL);
+			// don't store anything
+		} break;
+		case Variant::BOOL: {
+
+			bool val = p_property;
+			uint8_t v = VARIANT_BOOL;
+			f->store_8(val ? (v | 128) : v);
+		} break;
+		case Variant::INT: {
+
+			int64_t val = p_property;
+			if (val > 0x7FFFFFFF || val < -(int64_t)0x80000000) {
+				f->store_8(VARIANT_INT64);
+				f->store_64(val);
+
+			} else {
+				f->store_8(VARIANT_INT);
+				f->store_32(int32_t(p_property));
+			}
+
+		} break;
+		case Variant::REAL: {
+
+			double d = p_property;
+			float fl = d;
+			if (double(fl) != d) {
+				f->store_8(VARIANT_DOUBLE);
+				f->store_double(d);
+			} else {
+
+				f->store_8(VARIANT_REAL);
+				f->store_real(fl);
+			}
+
+		} break;
+		case Variant::STRING: {
+
+			f->store_8(VARIANT_STRING);
+			String val = p_property;
+			save_unicode_string(f, val);
+
+		} break;
+		case Variant::TICH_REF: {
+
+			f->store_8(VARIANT_TICH_REF);
+			String val = p_property;
+			save_unicode_string(f, val);
+
+		} break;
+		case Variant::VECTOR2: {
+
+			f->store_8(VARIANT_VECTOR2);
+			Vector2 val = p_property;
+			f->store_real(val.x);
+			f->store_real(val.y);
+
+		} break;
+		case Variant::RECT2: {
+
+			f->store_8(VARIANT_RECT2);
+			Rect2 val = p_property;
+			f->store_real(val.position.x);
+			f->store_real(val.position.y);
+			f->store_real(val.size.x);
+			f->store_real(val.size.y);
+
+		} break;
+		case Variant::VECTOR3: {
+
+			f->store_8(VARIANT_VECTOR3);
+			Vector3 val = p_property;
+			f->store_real(val.x);
+			f->store_real(val.y);
+			f->store_real(val.z);
+
+		} break;
+		case Variant::PLANE: {
+
+			f->store_8(VARIANT_PLANE);
+			Plane val = p_property;
+			f->store_real(val.normal.x);
+			f->store_real(val.normal.y);
+			f->store_real(val.normal.z);
+			f->store_real(val.d);
+
+		} break;
+		case Variant::QUAT: {
+
+			f->store_8(VARIANT_QUAT);
+			Quat val = p_property;
+			f->store_real(val.x);
+			f->store_real(val.y);
+			f->store_real(val.z);
+			f->store_real(val.w);
+
+		} break;
+		case Variant::AABB: {
+
+			f->store_8(VARIANT_AABB);
+			AABB val = p_property;
+			f->store_real(val.position.x);
+			f->store_real(val.position.y);
+			f->store_real(val.position.z);
+			f->store_real(val.size.x);
+			f->store_real(val.size.y);
+			f->store_real(val.size.z);
+
+		} break;
+		case Variant::TRANSFORM2D: {
+
+			f->store_8(VARIANT_MATRIX32);
+			Transform2D val = p_property;
+			f->store_real(val.elements[0].x);
+			f->store_real(val.elements[0].y);
+			f->store_real(val.elements[1].x);
+			f->store_real(val.elements[1].y);
+			f->store_real(val.elements[2].x);
+			f->store_real(val.elements[2].y);
+
+		} break;
+		case Variant::BASIS: {
+
+			f->store_8(VARIANT_MATRIX3);
+			Basis val = p_property;
+			f->store_real(val.elements[0].x);
+			f->store_real(val.elements[0].y);
+			f->store_real(val.elements[0].z);
+			f->store_real(val.elements[1].x);
+			f->store_real(val.elements[1].y);
+			f->store_real(val.elements[1].z);
+			f->store_real(val.elements[2].x);
+			f->store_real(val.elements[2].y);
+			f->store_real(val.elements[2].z);
+
+		} break;
+		case Variant::TRANSFORM: {
+
+			f->store_8(VARIANT_TRANSFORM);
+			Transform val = p_property;
+			f->store_real(val.basis.elements[0].x);
+			f->store_real(val.basis.elements[0].y);
+			f->store_real(val.basis.elements[0].z);
+			f->store_real(val.basis.elements[1].x);
+			f->store_real(val.basis.elements[1].y);
+			f->store_real(val.basis.elements[1].z);
+			f->store_real(val.basis.elements[2].x);
+			f->store_real(val.basis.elements[2].y);
+			f->store_real(val.basis.elements[2].z);
+			f->store_real(val.origin.x);
+			f->store_real(val.origin.y);
+			f->store_real(val.origin.z);
+
+		} break;
+		case Variant::COLOR: {
+
+			f->store_8(VARIANT_COLOR);
+			Color val = p_property;
+
+			f->store_32(val.to_abgr32());
+
+		} break;
+
+		case Variant::NODE_PATH: {
+			f->store_8(VARIANT_NODE_PATH);
+			NodePath np = p_property;
+			f->store_16(np.get_name_count());
+			uint16_t snc = np.get_subname_count();
+			if (np.is_absolute())
+				snc |= 0x8000;
+			f->store_16(snc);
+			for (int i = 0; i < np.get_name_count(); i++) {
+				if (string_map.has(np.get_name(i))) {
+					f->store_32(string_map[np.get_name(i)]);
+				} else {
+					save_unicode_string(f, np.get_name(i), true);
+				}
+			}
+			for (int i = 0; i < np.get_subname_count(); i++) {
+				if (string_map.has(np.get_subname(i))) {
+					f->store_32(string_map[np.get_subname(i)]);
+				} else {
+					save_unicode_string(f, np.get_subname(i), true);
+				}
+			}
+
+		} break;
+		case Variant::_RID: {
+
+			f->store_8(VARIANT_RID);
+			WARN_PRINT("Can't save RIDs.");
+			RID val = p_property;
+			f->store_32(val.get_id());
+		} break;
+		case Variant::OBJECT: {
+
+			if((Node*)p_property)
+			{
+				f->store_8(VARIANT_TICH_REF);
+				Node* node = p_property;
+				String val = node->get_path_tich_ref();
+				save_unicode_string(f, val);
+				return;
+			}
+
+			f->store_8(VARIANT_OBJECT);
+
+			if ((Object *)p_property && ((Object *)p_property)->get_class_name() == "RandomNumberGenerator") {
+				RandomNumberGenerator *rng = (RandomNumberGenerator *)(Object *)p_property;
+
+				f->store_8(OBJECT_RANDOM_GENERATOR);
+				f->store_64(rng->get_seed());
+				return;
+			}
+
+			RES res = p_property;
+			if (res.is_null()) {
+				f->store_8(OBJECT_EMPTY);
+				return; // don't save it
+			}
+
+			if (res->get_path().length() && res->get_path().find("::") == -1) {
+				f->store_8(OBJECT_EXTERNAL_RESOURCE_INDEX);
+				f->store_32(external_resources[res]);
+			} else {
+
+				if (!resource_set.has(res)) {
+					f->store_8(OBJECT_EMPTY);
+					ERR_FAIL_MSG("Resource was not pre cached for the resource section, most likely due to circular reference.");
+				}
+
+				f->store_8(OBJECT_INTERNAL_RESOURCE);
+				f->store_32(res->get_subindex());
+				//internal resource
+			}
+
+		} break;
+		case Variant::DICTIONARY: {
+
+			f->store_8(VARIANT_DICTIONARY);
+			Dictionary d = p_property;
+			f->store_32(uint32_t(d.size()));
+
+			List<Variant> keys;
+			d.get_key_list(&keys);
+
+			for (List<Variant>::Element *E = keys.front(); E; E = E->next()) {
+
+				/*
+				if (!_check_type(dict[E->get()]))
+					continue;
+				*/
+
+				write_variant_optimal(f, E->get(), resource_set, external_resources, string_map);
+				write_variant_optimal(f, d[E->get()], resource_set, external_resources, string_map);
+			}
+
+		} break;
+		case Variant::ARRAY: {
+
+			f->store_8(VARIANT_ARRAY);
+			Array a = p_property;
+			f->store_32(uint32_t(a.size()));
+			for (int i = 0; i < a.size(); i++) {
+
+				write_variant_optimal(f, a[i], resource_set, external_resources, string_map);
+			}
+
+		} break;
+		case Variant::POOL_BYTE_ARRAY: {
+
+			f->store_8(VARIANT_RAW_ARRAY);
+			PoolVector<uint8_t> arr = p_property;
+			int len = arr.size();
+			f->store_32(len);
+			PoolVector<uint8_t>::Read r = arr.read();
+			f->store_buffer(r.ptr(), len);
+			_pad_buffer(f, len);
+
+		} break;
+		case Variant::POOL_INT_ARRAY: {
+
+			f->store_8(VARIANT_INT_ARRAY);
+			PoolVector<int> arr = p_property;
+			int len = arr.size();
+			f->store_32(len);
+			PoolVector<int>::Read r = arr.read();
+			for (int i = 0; i < len; i++)
+				f->store_32(r[i]);
+
+		} break;
+		case Variant::POOL_REAL_ARRAY: {
+
+			f->store_8(VARIANT_REAL_ARRAY);
+			PoolVector<real_t> arr = p_property;
+			int len = arr.size();
+			f->store_32(len);
+			PoolVector<real_t>::Read r = arr.read();
+			for (int i = 0; i < len; i++) {
+				f->store_real(r[i]);
+			}
+
+		} break;
+		case Variant::POOL_STRING_ARRAY: {
+
+			f->store_8(VARIANT_STRING_ARRAY);
+			PoolVector<String> arr = p_property;
+			int len = arr.size();
+			f->store_32(len);
+			PoolVector<String>::Read r = arr.read();
+			for (int i = 0; i < len; i++) {
+				save_unicode_string(f, r[i]);
+			}
+
+		} break;
+		case Variant::POOL_VECTOR3_ARRAY: {
+
+			f->store_8(VARIANT_VECTOR3_ARRAY);
+			PoolVector<Vector3> arr = p_property;
+			int len = arr.size();
+			f->store_32(len);
+			PoolVector<Vector3>::Read r = arr.read();
+			for (int i = 0; i < len; i++) {
+				f->store_real(r[i].x);
+				f->store_real(r[i].y);
+				f->store_real(r[i].z);
+			}
+
+		} break;
+		case Variant::POOL_VECTOR2_ARRAY: {
+
+			f->store_8(VARIANT_VECTOR2_ARRAY);
+			PoolVector<Vector2> arr = p_property;
+			int len = arr.size();
+			f->store_32(len);
+			PoolVector<Vector2>::Read r = arr.read();
+			for (int i = 0; i < len; i++) {
+				f->store_real(r[i].x);
+				f->store_real(r[i].y);
+			}
+
+		} break;
+		case Variant::POOL_COLOR_ARRAY: {
+
+			f->store_8(VARIANT_COLOR_ARRAY);
+			PoolVector<Color> arr = p_property;
+			int len = arr.size();
+			f->store_32(len);
+			PoolVector<Color>::Read r = arr.read();
+			for (int i = 0; i < len; i++) {
+				f->store_real(r[i].r);
+				f->store_real(r[i].g);
+				f->store_real(r[i].b);
+				f->store_real(r[i].a);
+			}
+
+		} break;
+		default: {
+
+			ERR_FAIL_MSG("Invalid variant.");
+		}
+	}
+}
+
 void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Variant &p_property, Set<RES> &resource_set, Map<RES, int> &external_resources, Map<StringName, int> &string_map, const PropertyInfo &p_hint) {
 
 	switch (p_property.get_type()) {
@@ -1508,10 +1938,9 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 		} break;
 		case Variant::OBJECT: {
 
-			if((Node*)p_property)
-			{
+			if ((Node *)p_property) {
 				f->store_32(VARIANT_TICH_REF);
-				Node* node = p_property;
+				Node *node = p_property;
 				String val = node->get_path_tich_ref();
 				save_unicode_string(f, val);
 				return;
@@ -1983,24 +2412,49 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 
 	Vector<uint64_t> ofs_table;
 
-	//now actually save the resources
-	for (List<ResourceData>::Element *E = resources.front(); E; E = E->next()) {
+	if (TichInfo::IsGA())
+	{
+		//now actually save the resources
+		for (List<ResourceData>::Element *E = resources.front(); E; E = E->next()) {
 
-		ResourceData &rd = E->get();
+			ResourceData &rd = E->get();
 
-		ofs_table.push_back(f->get_position());
-		save_unicode_string(f, rd.type);
-		//WARN_PRINT(String("RES_Table: ") + rd.type);
-		f->store_32(rd.properties.size());
+			ofs_table.push_back(f->get_position());
+			save_unicode_string(f, rd.type);
+			//WARN_PRINT(String("RES_Table: ") + rd.type);
+			f->store_32(rd.properties.size());
 
-		for (List<Property>::Element *F = rd.properties.front(); F; F = F->next()) {
+			for (List<Property>::Element *F = rd.properties.front(); F; F = F->next()) {
 
-			Property &p = F->get();
-			f->store_32(p.name_idx);
-			_write_variant(p.value, F->get().pi);
-			//WARN_PRINT(String("PROP: ") + strings[p.name_idx] + " | " + p.value);
+				Property &p = F->get();
+				f->store_32(p.name_idx);
+				_write_variant_optimal(p.value, F->get().pi);
+				//WARN_PRINT(String("PROP: ") + strings[p.name_idx] + " | " + p.value);
+			}
 		}
 	}
+	else
+	{
+		//now actually save the resources
+		for (List<ResourceData>::Element *E = resources.front(); E; E = E->next()) {
+
+			ResourceData &rd = E->get();
+
+			ofs_table.push_back(f->get_position());
+			save_unicode_string(f, rd.type);
+			//WARN_PRINT(String("RES_Table: ") + rd.type);
+			f->store_32(rd.properties.size());
+
+			for (List<Property>::Element *F = rd.properties.front(); F; F = F->next()) {
+
+				Property &p = F->get();
+				f->store_32(p.name_idx);
+				_write_variant(p.value, F->get().pi);
+				//WARN_PRINT(String("PROP: ") + strings[p.name_idx] + " | " + p.value);
+			}
+		}
+	}
+	
 
 	bytesWritten = f->get_position();
 

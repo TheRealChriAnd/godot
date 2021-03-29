@@ -9,10 +9,12 @@ class TichInfo
 public:
 	static bool IsSaving();
 	static bool IsLoading();
+	static bool IsGA();
 
 private:
 	static bool s_IsSaving;
 	static bool s_IsLoading;
+	static bool s_IsGA;
 };
 
 #endif

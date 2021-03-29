@@ -799,10 +799,6 @@ void ResourceInteractiveLoaderMemory::open(FileAccess *p_f) {
 
 	f = p_f;
 
-	importmd_ofs = f->get_64();
-	for (int i = 0; i < 14; i++)
-		f->get_32(); //skip a few reserved fields
-
 	uint32_t ext_resources_size = f->get_32();
 	for (uint32_t i = 0; i < ext_resources_size; i++) {
 
@@ -1481,11 +1477,6 @@ Error ResourceFormatSaverMemoryInstance::save(const String &p_path, const RES &p
 	path = ProjectSettings::get_singleton()->localize_path(p_path);
 
 	_find_resources(p_resource, true);
-
-	f->store_64(0); //offset to import metadata
-
-	for (int i = 0; i < 14; i++)
-		f->store_32(0); // reserved
 
 	List<ResourceData> resources;
 

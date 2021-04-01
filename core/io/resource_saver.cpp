@@ -41,6 +41,7 @@ Ref<ResourceFormatSaver> ResourceSaver::saver[MAX_SAVERS];
 int ResourceSaver::saver_count = 0;
 bool ResourceSaver::timestamp_on_save = false;
 ResourceSavedCallback ResourceSaver::save_callback = 0;
+uint64_t ResourceFormatSaver::s_BytesWritten = 0;
 
 Error ResourceFormatSaver::save(const String &p_path, const RES &p_resource, uint32_t p_flags) {
 

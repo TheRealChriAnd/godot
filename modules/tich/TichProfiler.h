@@ -26,7 +26,7 @@ private:
 		uint64_t stateSize;
 	};
 
-	void StartGs(uint64_t samples, uint16_t executionInterval, bool save);
+	void StartGs(const String &saveFileExtention, uint64_t samples, uint16_t executionInterval, bool save);
 
 private:
 	Vector<ProfilerData> profilingData;
@@ -34,9 +34,12 @@ private:
 	uint64_t sample;
 	uint16_t executionInterval;
 	String dataPath;
+	String saveFileExtention;
 	bool save;
-	uint64_t index; 
-
+	uint64_t index;
+	uint64_t exectionCounter;
+	uint64_t dataFileSize;
+	uint64_t timelineSize;
 	void* handle;
 	uint64_t cyclesLast;
 	uint64_t cpuFrequency;
@@ -47,7 +50,7 @@ public:
 
 	void Update(uint64_t frameTime);
 
-	void Start(uint64_t samples, uint16_t executionInterval, uint16_t complexityLevel, bool save, bool gaImplementation = true);
+	void Start(const String& saveFileExtention, uint64_t samples, uint16_t executionInterval, uint16_t complexityLevel, bool save, bool gaImplementation = true);
 
 	double getCPUUsage(uint64_t deltaTime);
 

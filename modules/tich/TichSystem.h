@@ -22,8 +22,8 @@ public:
 
 	void Update(uint64_t frameTime);
 	void ChangeComplexity();
-	bool Save();
-	bool Load();
+	bool Save(const String &file);
+	bool Load(const String &file);
 
 private:
 

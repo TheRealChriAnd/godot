@@ -7,6 +7,7 @@
 
 #include "resource_format_memory.h"
 #include "core/io/resource_format_binary.h"
+#include "core/io/file_access_memory.h"
 
 #include <thread>
 #include <windows.h>
@@ -94,9 +95,9 @@ void TichProfiler::Update(uint64_t frameTime)
 			if (TichInfo::IsGA())
 			{
 				if (save)
-					TichSystem::GetInstance()->Save();
+					TichSystem::GetInstance()->Save("res://state_" + itos(exectionCounter) + saveFileExtention);
 				else
-					TichSystem::GetInstance()->Load();
+					TichSystem::GetInstance()->Load("res://state_" + itos(exectionCounter) + saveFileExtention);
 			}
 			else
 			{
@@ -111,6 +112,8 @@ void TichProfiler::Update(uint64_t frameTime)
 			}
 
 			data.executionTime = os->get_ticks_usec() - time;
+			exectionCounter++;
+			timelineSize += ResourceFormatSaver::get_state_size();
 		}
 		else
 		{
@@ -118,14 +121,10 @@ void TichProfiler::Update(uint64_t frameTime)
 		}
 
 		data.frameTime	= frameTime;
-		data.memory		= Memory::get_mem_usage();
 		data.nodes		= perf->get_monitor(Performance::Monitor::OBJECT_NODE_COUNT);
 		data.objects	= perf->get_monitor(Performance::Monitor::OBJECT_COUNT);
-
-		if (TichInfo::IsGA())
-			data.stateSize	= ResourceFormatSaverMemory::get_singleton()->get_state_size();
-		else
-			data.stateSize = ResourceFormatSaverBinary::get_singleton()->get_state_size();
+		data.stateSize	= ResourceFormatSaver::get_state_size();
+		data.memory		= Memory::get_mem_usage() - dataFileSize + timelineSize;
 
 		profilingData.set(index++, data);
 
@@ -175,7 +174,8 @@ void TichProfiler::Update(uint64_t frameTime)
 	}
 }
 
-void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, uint16_t complexityLevel, bool save, bool gaImplementation) {
+void TichProfiler::Start(const String &saveFileExtention, uint64_t samples, uint16_t executionInterval, uint16_t complexityLevel, bool save, bool gaImplementation) {
+	this->saveFileExtention = saveFileExtention;
 	this->sample = samples;
 	this->save = save;
 	TichInfo::s_IsGA = gaImplementation;
@@ -184,6 +184,12 @@ void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, uint16_t 
 	this->dataPath = "data/" + String(gaImplementation ? "ga" : "gs") + "_" + String(save ? "save" : "load") + "_" + itos(complexityLevel) + ".csv";
 
 	index = 0;
+	exectionCounter = 0;
+	timelineSize = 0;
+
+	FileAccessMemory *f = memnew(FileAccessMemory);
+	f->_open("data", FileAccess::READ);
+	dataFileSize = f->get_len();
 
 	_Directory dir;
 	dir.make_dir("data");
@@ -202,9 +208,9 @@ void TichProfiler::Start(uint64_t samples, uint16_t executionInterval, uint16_t 
 		compl ;
 }
 
-void TichProfiler::StartGs(uint64_t samples, uint16_t executionInterval, bool save)
+void TichProfiler::StartGs(const String& saveFileExtention, uint64_t samples, uint16_t executionInterval, bool save)
 {
-	Start(samples, executionInterval, 1, save, false);
+	Start(saveFileExtention, samples, executionInterval, 1, save, false);
 }
 
 void TichProfiler::_bind_methods()

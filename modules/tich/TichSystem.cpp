@@ -19,8 +19,11 @@
 
 #include "FunctionProfiler.h"
 
-#define SAVE_FILE "res://saved.tich"
-//#define SAVE_FILE "res://saved.tscn"
+//#define SAVE_FILE "res://saved.tich"
+#define SAVE_FILE "res://saved.tscn"
+
+#define SAVE_FILE_EXTENTION ".tich"
+//#define SAVE_FILE_EXTENTION ".tscn"
 
 TichSystem* TichSystem::s_Instance = nullptr;
 
@@ -63,7 +66,7 @@ void TichSystem::Update(uint64_t frameTime)
 			OS* os = OS::get_singleton();
 			uint64_t time = os->get_ticks_usec();
 
-			if (Save())
+			if (Save(SAVE_FILE))
 			{
 				screenshotFileName = "_save.png";
 				screenshotCountDown = 1;
@@ -71,7 +74,7 @@ void TichSystem::Update(uint64_t frameTime)
 				os->print("Save Time %llu\n", time);
 				os->print("Memory %llu\n", Memory::get_mem_usage());
 				os->print("Frame Time %llu\n", frameTime);
-				os->print("State Size %llu\n", ResourceFormatSaverMemory::get_singleton()->get_state_size());
+				os->print("State Size %llu\n", ResourceFormatSaver::get_state_size());
 			}
 		}	
 	}
@@ -87,7 +90,7 @@ void TichSystem::Update(uint64_t frameTime)
 			Variant var = ProjectSettings::get_singleton()->get_setting("application/config/name");
 			image->save_png("screenshots/" + (String)var + "_preload.png");
 
-			if(Load())
+			if (Load(SAVE_FILE))
 			{
 				screenshotFileName = "_load.png";
 				manualLoad = true;
@@ -102,28 +105,28 @@ void TichSystem::Update(uint64_t frameTime)
 	{
 		if (!lastButtonStateF3)
 		{
-			TichProfiler::get_singleton()->Start(600, 60, currentComplexity, true, false);
+			TichProfiler::get_singleton()->Start(SAVE_FILE_EXTENTION, 600, 60, currentComplexity, true, false);
 		}
 	}
 	else if (buttonStateF4) //Gs Load
 	{
 		if (!lastButtonStateF4)
 		{
-			TichProfiler::get_singleton()->Start(600, 60, currentComplexity, false, false);
+			TichProfiler::get_singleton()->Start(SAVE_FILE_EXTENTION, 600, 60, currentComplexity, false, false);
 		}
 	}
 	else if (buttonStateF5) //Ga Save
 	{
 		if (!lastButtonStateF5)
 		{
-			TichProfiler::get_singleton()->Start(600, 60, currentComplexity, true, true);
+			TichProfiler::get_singleton()->Start(SAVE_FILE_EXTENTION, 600, 60, currentComplexity, true, true);
 		}
 	}
 	else if (buttonStateF6) //GaLoad
 	{
 		if (!lastButtonStateF6)
 		{
-			TichProfiler::get_singleton()->Start(600, 60, currentComplexity, false, true);
+			TichProfiler::get_singleton()->Start(SAVE_FILE_EXTENTION, 600, 60, currentComplexity, false, true);
 		}
 	}
 
@@ -182,7 +185,7 @@ void TichSystem::ChangeComplexity()
 {
 }
 
-bool TichSystem::Save()
+bool TichSystem::Save(const String& file)
 {
 	if (TichInfo::s_IsLoading)
 		return false;
@@ -215,7 +218,7 @@ bool TichSystem::Save()
 	}
 
 	FUNCTION_PROFILER_BEGIN("ResourceSaver::save()");
-	result = ResourceSaver::save(SAVE_FILE, packedScene);
+	result = ResourceSaver::save(file, packedScene);
 	FUNCTION_PROFILER_END("ResourceSaver::save()");
 
 	if (result != Error::OK)
@@ -234,7 +237,7 @@ bool TichSystem::Save()
 	return true;
 }
 
-bool TichSystem::Load()
+bool TichSystem::Load(const String &file)
 {
 	if (TichInfo::s_IsLoading)
 		return false;
@@ -242,7 +245,7 @@ bool TichSystem::Load()
 	TichInfo::s_IsLoading = true;
 	//WARN_PRINT("Loading");
 
-	Error result = SceneTree::get_singleton()->change_scene(SAVE_FILE);
+	Error result = SceneTree::get_singleton()->change_scene(file);
 
 	currentTreeVersion = SceneTree::get_singleton()->get_tree_version();
 

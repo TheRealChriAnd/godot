@@ -1480,7 +1480,7 @@ void ResourceFormatSaverTextInstance::_find_resources(const Variant &p_variant, 
 	}
 }
 
-Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_resource, uint32_t p_flags) {
+Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_resource, uint64_t& bytesWritten, uint32_t p_flags) {
 
 	if (p_path.ends_with(".tscn")) {
 		packed_scene = p_resource;
@@ -1790,6 +1790,8 @@ Error ResourceFormatSaverTextInstance::save(const String &p_path, const RES &p_r
 		}
 	}
 
+	bytesWritten = f->get_position();
+
 	if (f->get_error() != OK && f->get_error() != ERR_FILE_EOF) {
 		f->close();
 		return ERR_CANT_CREATE;
@@ -1808,7 +1810,7 @@ Error ResourceFormatSaverText::save(const String &p_path, const RES &p_resource,
 	}
 
 	ResourceFormatSaverTextInstance saver;
-	return saver.save(p_path, p_resource, p_flags);
+	return saver.save(p_path, p_resource, s_BytesWritten, p_flags);
 }
 
 bool ResourceFormatSaverText::recognize(const RES &p_resource) const {

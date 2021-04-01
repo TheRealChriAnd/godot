@@ -45,6 +45,11 @@ public:
 	virtual void get_recognized_extensions(const RES &p_resource, List<String> *p_extensions) const;
 
 	virtual ~ResourceFormatSaver() {}
+
+	static uint64_t get_state_size() { return s_BytesWritten; };
+
+protected:
+	static uint64_t s_BytesWritten;
 };
 
 typedef void (*ResourceSavedCallback)(Ref<Resource> p_resource, const String &p_path);

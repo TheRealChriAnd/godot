@@ -185,7 +185,7 @@ class ResourceFormatSaverTextInstance {
 	String _write_resource(const RES &res);
 
 public:
-	Error save(const String &p_path, const RES &p_resource, uint32_t p_flags = 0);
+	Error save(const String &p_path, const RES &p_resource, uint64_t& bytesWritten, uint32_t p_flags = 0);
 };
 
 class ResourceFormatSaverText : public ResourceFormatSaver {

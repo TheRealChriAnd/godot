@@ -1766,7 +1766,7 @@ int ResourceFormatSaverBinaryInstance::get_string_index(const String &p_string) 
 	return strings.size() - 1;
 }
 
-Error ResourceFormatSaverBinaryInstance::save(const String &p_path, const RES &p_resource, uint32_t p_flags) {
+Error ResourceFormatSaverBinaryInstance::save(const String &p_path, const RES &p_resource, uint64_t& bytesWritten, uint32_t p_flags) {
 
 	Error err;
 	if (p_flags & ResourceSaver::FLAG_COMPRESS) {
@@ -1968,7 +1968,7 @@ Error ResourceFormatSaverBinaryInstance::save(const String &p_path, const RES &p
 		}
 	}
 
-	ResourceFormatSaverBinary::singleton->m_Bytes = f->get_position();
+	bytesWritten = f->get_position();
 
 	for (int i = 0; i < ofs_table.size(); i++) {
 		f->seek(ofs_pos[i]);
@@ -1995,7 +1995,7 @@ Error ResourceFormatSaverBinary::save(const String &p_path, const RES &p_resourc
 
 	String local_path = ProjectSettings::get_singleton()->localize_path(p_path);
 	ResourceFormatSaverBinaryInstance saver;
-	return saver.save(local_path, p_resource, p_flags);
+	return saver.save(local_path, p_resource, s_BytesWritten, p_flags);
 }
 
 bool ResourceFormatSaverBinary::recognize(const RES &p_resource) const {
@@ -2010,12 +2010,6 @@ void ResourceFormatSaverBinary::get_recognized_extensions(const RES &p_resource,
 	if (base != "res")
 		p_extensions->push_back("res");
 }
-
-uint64_t ResourceFormatSaverBinary::get_state_size()
-{
-	return m_Bytes;
-}
-
 ResourceFormatSaverBinary *ResourceFormatSaverBinary::singleton = NULL;
 
 ResourceFormatSaverBinary::ResourceFormatSaverBinary() {

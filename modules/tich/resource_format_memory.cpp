@@ -141,7 +141,7 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v)
 		} break;
 		case VARIANT_REAL: {
 
-			r_v = f->get_real();
+			r_v = f->get_float();
 		} break;
 		case VARIANT_DOUBLE: {
 
@@ -158,101 +158,101 @@ Error ResourceInteractiveLoaderMemory::parse_variant(Variant &r_v)
 		case VARIANT_VECTOR2: {
 
 			Vector2 v;
-			v.x = f->get_real();
-			v.y = f->get_real();
+			v.x = f->get_float();
+			v.y = f->get_float();
 			r_v = v;
 
 		} break;
 		case VARIANT_RECT2: {
 
 			Rect2 v;
-			v.position.x = f->get_real();
-			v.position.y = f->get_real();
-			v.size.x = f->get_real();
-			v.size.y = f->get_real();
+			v.position.x = f->get_float();
+			v.position.y = f->get_float();
+			v.size.x = f->get_float();
+			v.size.y = f->get_float();
 			r_v = v;
 
 		} break;
 		case VARIANT_VECTOR3: {
 
 			Vector3 v;
-			v.x = f->get_real();
-			v.y = f->get_real();
-			v.z = f->get_real();
+			v.x = f->get_float();
+			v.y = f->get_float();
+			v.z = f->get_float();
 			r_v = v;
 		} break;
 		case VARIANT_PLANE: {
 
 			Plane v;
-			v.normal.x = f->get_real();
-			v.normal.y = f->get_real();
-			v.normal.z = f->get_real();
-			v.d = f->get_real();
+			v.normal.x = f->get_float();
+			v.normal.y = f->get_float();
+			v.normal.z = f->get_float();
+			v.d = f->get_float();
 			r_v = v;
 		} break;
 		case VARIANT_QUAT: {
 			Quat v;
-			v.x = f->get_real();
-			v.y = f->get_real();
-			v.z = f->get_real();
-			v.w = f->get_real();
+			v.x = f->get_float();
+			v.y = f->get_float();
+			v.z = f->get_float();
+			v.w = f->get_float();
 			r_v = v;
 
 		} break;
 		case VARIANT_AABB: {
 
 			AABB v;
-			v.position.x = f->get_real();
-			v.position.y = f->get_real();
-			v.position.z = f->get_real();
-			v.size.x = f->get_real();
-			v.size.y = f->get_real();
-			v.size.z = f->get_real();
+			v.position.x = f->get_float();
+			v.position.y = f->get_float();
+			v.position.z = f->get_float();
+			v.size.x = f->get_float();
+			v.size.y = f->get_float();
+			v.size.z = f->get_float();
 			r_v = v;
 
 		} break;
 		case VARIANT_MATRIX32: {
 
 			Transform2D v;
-			v.elements[0].x = f->get_real();
-			v.elements[0].y = f->get_real();
-			v.elements[1].x = f->get_real();
-			v.elements[1].y = f->get_real();
-			v.elements[2].x = f->get_real();
-			v.elements[2].y = f->get_real();
+			v.elements[0].x = f->get_float();
+			v.elements[0].y = f->get_float();
+			v.elements[1].x = f->get_float();
+			v.elements[1].y = f->get_float();
+			v.elements[2].x = f->get_float();
+			v.elements[2].y = f->get_float();
 			r_v = v;
 
 		} break;
 		case VARIANT_MATRIX3: {
 
 			Basis v;
-			v.elements[0].x = f->get_real();
-			v.elements[0].y = f->get_real();
-			v.elements[0].z = f->get_real();
-			v.elements[1].x = f->get_real();
-			v.elements[1].y = f->get_real();
-			v.elements[1].z = f->get_real();
-			v.elements[2].x = f->get_real();
-			v.elements[2].y = f->get_real();
-			v.elements[2].z = f->get_real();
+			v.elements[0].x = f->get_float();
+			v.elements[0].y = f->get_float();
+			v.elements[0].z = f->get_float();
+			v.elements[1].x = f->get_float();
+			v.elements[1].y = f->get_float();
+			v.elements[1].z = f->get_float();
+			v.elements[2].x = f->get_float();
+			v.elements[2].y = f->get_float();
+			v.elements[2].z = f->get_float();
 			r_v = v;
 
 		} break;
 		case VARIANT_TRANSFORM: {
 
 			Transform v;
-			v.basis.elements[0].x = f->get_real();
-			v.basis.elements[0].y = f->get_real();
-			v.basis.elements[0].z = f->get_real();
-			v.basis.elements[1].x = f->get_real();
-			v.basis.elements[1].y = f->get_real();
-			v.basis.elements[1].z = f->get_real();
-			v.basis.elements[2].x = f->get_real();
-			v.basis.elements[2].y = f->get_real();
-			v.basis.elements[2].z = f->get_real();
-			v.origin.x = f->get_real();
-			v.origin.y = f->get_real();
-			v.origin.z = f->get_real();
+			v.basis.elements[0].x = f->get_float();
+			v.basis.elements[0].y = f->get_float();
+			v.basis.elements[0].z = f->get_float();
+			v.basis.elements[1].x = f->get_float();
+			v.basis.elements[1].y = f->get_float();
+			v.basis.elements[1].z = f->get_float();
+			v.basis.elements[2].x = f->get_float();
+			v.basis.elements[2].y = f->get_float();
+			v.basis.elements[2].z = f->get_float();
+			v.origin.x = f->get_float();
+			v.origin.y = f->get_float();
+			v.origin.z = f->get_float();
 			r_v = v;
 		} break;
 		case VARIANT_COLOR: {
@@ -770,7 +770,7 @@ void ResourceInteractiveLoaderMemory::set_translation_remapped(bool p_remapped) 
 
 String ResourceInteractiveLoaderMemory::get_unicode_string()
 {
-	ResourceFormatSaverMemory *saver = ResourceFormatSaverMemory::get_singleton();
+	ResourceFormatSaverMemory *saver = ResourceFormatSaverMemory::singleton;
 
 	return saver->m_StringElements.get(f->get_16())->key();
 }
@@ -1019,16 +1019,8 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 		} break;
 		case Variant::REAL: {
 
-			double d = p_property;
-			float fl = d;
-			if (double(fl) != d) {
-				f->store_8(VARIANT_DOUBLE);
-				f->store_double(d);
-			} else {
-
-				f->store_8(VARIANT_REAL);
-				f->store_real(fl);
-			}
+			f->store_8(VARIANT_REAL);
+			f->store_float(p_property);
 
 		} break;
 		case Variant::STRING: {
@@ -1049,104 +1041,104 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 
 			f->store_8(VARIANT_VECTOR2);
 			Vector2 val = p_property;
-			f->store_real(val.x);
-			f->store_real(val.y);
+			f->store_float(val.x);
+			f->store_float(val.y);
 
 		} break;
 		case Variant::RECT2: {
 
 			f->store_8(VARIANT_RECT2);
 			Rect2 val = p_property;
-			f->store_real(val.position.x);
-			f->store_real(val.position.y);
-			f->store_real(val.size.x);
-			f->store_real(val.size.y);
+			f->store_float(val.position.x);
+			f->store_float(val.position.y);
+			f->store_float(val.size.x);
+			f->store_float(val.size.y);
 
 		} break;
 		case Variant::VECTOR3: {
 
 			f->store_8(VARIANT_VECTOR3);
 			Vector3 val = p_property;
-			f->store_real(val.x);
-			f->store_real(val.y);
-			f->store_real(val.z);
+			f->store_float(val.x);
+			f->store_float(val.y);
+			f->store_float(val.z);
 
 		} break;
 		case Variant::PLANE: {
 
 			f->store_8(VARIANT_PLANE);
 			Plane val = p_property;
-			f->store_real(val.normal.x);
-			f->store_real(val.normal.y);
-			f->store_real(val.normal.z);
-			f->store_real(val.d);
+			f->store_float(val.normal.x);
+			f->store_float(val.normal.y);
+			f->store_float(val.normal.z);
+			f->store_float(val.d);
 
 		} break;
 		case Variant::QUAT: {
 
 			f->store_8(VARIANT_QUAT);
 			Quat val = p_property;
-			f->store_real(val.x);
-			f->store_real(val.y);
-			f->store_real(val.z);
-			f->store_real(val.w);
+			f->store_float(val.x);
+			f->store_float(val.y);
+			f->store_float(val.z);
+			f->store_float(val.w);
 
 		} break;
 		case Variant::AABB: {
 
 			f->store_8(VARIANT_AABB);
 			AABB val = p_property;
-			f->store_real(val.position.x);
-			f->store_real(val.position.y);
-			f->store_real(val.position.z);
-			f->store_real(val.size.x);
-			f->store_real(val.size.y);
-			f->store_real(val.size.z);
+			f->store_float(val.position.x);
+			f->store_float(val.position.y);
+			f->store_float(val.position.z);
+			f->store_float(val.size.x);
+			f->store_float(val.size.y);
+			f->store_float(val.size.z);
 
 		} break;
 		case Variant::TRANSFORM2D: {
 
 			f->store_8(VARIANT_MATRIX32);
 			Transform2D val = p_property;
-			f->store_real(val.elements[0].x);
-			f->store_real(val.elements[0].y);
-			f->store_real(val.elements[1].x);
-			f->store_real(val.elements[1].y);
-			f->store_real(val.elements[2].x);
-			f->store_real(val.elements[2].y);
+			f->store_float(val.elements[0].x);
+			f->store_float(val.elements[0].y);
+			f->store_float(val.elements[1].x);
+			f->store_float(val.elements[1].y);
+			f->store_float(val.elements[2].x);
+			f->store_float(val.elements[2].y);
 
 		} break;
 		case Variant::BASIS: {
 
 			f->store_8(VARIANT_MATRIX3);
 			Basis val = p_property;
-			f->store_real(val.elements[0].x);
-			f->store_real(val.elements[0].y);
-			f->store_real(val.elements[0].z);
-			f->store_real(val.elements[1].x);
-			f->store_real(val.elements[1].y);
-			f->store_real(val.elements[1].z);
-			f->store_real(val.elements[2].x);
-			f->store_real(val.elements[2].y);
-			f->store_real(val.elements[2].z);
+			f->store_float(val.elements[0].x);
+			f->store_float(val.elements[0].y);
+			f->store_float(val.elements[0].z);
+			f->store_float(val.elements[1].x);
+			f->store_float(val.elements[1].y);
+			f->store_float(val.elements[1].z);
+			f->store_float(val.elements[2].x);
+			f->store_float(val.elements[2].y);
+			f->store_float(val.elements[2].z);
 
 		} break;
 		case Variant::TRANSFORM: {
 
 			f->store_8(VARIANT_TRANSFORM);
 			Transform val = p_property;
-			f->store_real(val.basis.elements[0].x);
-			f->store_real(val.basis.elements[0].y);
-			f->store_real(val.basis.elements[0].z);
-			f->store_real(val.basis.elements[1].x);
-			f->store_real(val.basis.elements[1].y);
-			f->store_real(val.basis.elements[1].z);
-			f->store_real(val.basis.elements[2].x);
-			f->store_real(val.basis.elements[2].y);
-			f->store_real(val.basis.elements[2].z);
-			f->store_real(val.origin.x);
-			f->store_real(val.origin.y);
-			f->store_real(val.origin.z);
+			f->store_float(val.basis.elements[0].x);
+			f->store_float(val.basis.elements[0].y);
+			f->store_float(val.basis.elements[0].z);
+			f->store_float(val.basis.elements[1].x);
+			f->store_float(val.basis.elements[1].y);
+			f->store_float(val.basis.elements[1].z);
+			f->store_float(val.basis.elements[2].x);
+			f->store_float(val.basis.elements[2].y);
+			f->store_float(val.basis.elements[2].z);
+			f->store_float(val.origin.x);
+			f->store_float(val.origin.y);
+			f->store_float(val.origin.z);
 
 		} break;
 		case Variant::COLOR: {
@@ -1277,7 +1269,7 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 			f->store_32(len);
 			PoolVector<real_t>::Read r = arr.read();
 			for (int i = 0; i < len; i++) {
-				f->store_real(r[i]);
+				f->store_float(r[i]);
 			}
 
 		} break;
@@ -1301,9 +1293,9 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 			f->store_32(len);
 			PoolVector<Vector3>::Read r = arr.read();
 			for (int i = 0; i < len; i++) {
-				f->store_real(r[i].x);
-				f->store_real(r[i].y);
-				f->store_real(r[i].z);
+				f->store_float(r[i].x);
+				f->store_float(r[i].y);
+				f->store_float(r[i].z);
 			}
 
 		} break;
@@ -1315,8 +1307,8 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 			f->store_32(len);
 			PoolVector<Vector2>::Read r = arr.read();
 			for (int i = 0; i < len; i++) {
-				f->store_real(r[i].x);
-				f->store_real(r[i].y);
+				f->store_float(r[i].x);
+				f->store_float(r[i].y);
 			}
 
 		} break;
@@ -1328,10 +1320,10 @@ void ResourceFormatSaverMemoryInstance::write_variant(FileAccess *f, const Varia
 			f->store_32(len);
 			PoolVector<Color>::Read r = arr.read();
 			for (int i = 0; i < len; i++) {
-				f->store_real(r[i].r);
-				f->store_real(r[i].g);
-				f->store_real(r[i].b);
-				f->store_real(r[i].a);
+				f->store_float(r[i].r);
+				f->store_float(r[i].g);
+				f->store_float(r[i].b);
+				f->store_float(r[i].a);
 			}
 
 		} break;
@@ -1440,7 +1432,7 @@ void ResourceFormatSaverMemoryInstance::save_unicode_string(FileAccess *f, const
 
 int ResourceFormatSaverMemoryInstance::add_unicode_string(const String &p_string)
 {
-	ResourceFormatSaverMemory *saver = ResourceFormatSaverMemory::get_singleton();
+	ResourceFormatSaverMemory *saver = ResourceFormatSaverMemory::singleton;
 
 	Map<String, int>::Element *e = saver->m_StringTable.find(p_string);
 
@@ -1640,7 +1632,7 @@ Error ResourceFormatSaverMemory::save(const String &p_path, const RES &p_resourc
 
 	String local_path = ProjectSettings::get_singleton()->localize_path(p_path);
 	ResourceFormatSaverMemoryInstance saver;
-	return saver.save(local_path, p_resource, m_Bytes, p_flags);
+	return saver.save(local_path, p_resource, s_BytesWritten, p_flags);
 }
 
 bool ResourceFormatSaverMemory::recognize(const RES &p_resource) const {
@@ -1653,15 +1645,9 @@ void ResourceFormatSaverMemory::get_recognized_extensions(const RES &p_resource,
 	p_extensions->push_back("tich");
 }
 
-uint64_t ResourceFormatSaverMemory::get_state_size()
-{
-	return m_Bytes;
-}
-
 ResourceFormatSaverMemory *ResourceFormatSaverMemory::singleton = NULL;
 
-ResourceFormatSaverMemory::ResourceFormatSaverMemory() :
-	m_Bytes(0)
+ResourceFormatSaverMemory::ResourceFormatSaverMemory()
 {
 	singleton = this;
 }

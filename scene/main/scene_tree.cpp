@@ -1294,7 +1294,8 @@ void SceneTree::_change_scene(Node *p_to) {
 		else
 		{
 			root->remove_child(current_scene);
-			memdelete(current_scene);
+			if (current_scene)
+				memdelete(current_scene);
 		}
 		current_scene = NULL;
 	}

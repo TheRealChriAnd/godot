@@ -22,7 +22,7 @@ static Ref<FunctionProfiler> functionProfiler;
 void register_tich_types()
 {
 	Vector<uint8_t> data;
-	data.resize(1024 * 1024 * 4);
+	data.resize(1024 * 1024 * 64);
 
 	FileAccessMemory::register_file("data", data);
 

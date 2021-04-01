@@ -1779,7 +1779,7 @@ Error ResourceFormatSaverBinaryInstance::save(const String &p_path, const RES &p
 
 	} else {
 
-		if (TichInfo::IsSaving)
+		if (TichInfo::IsSaving())
 		{
 			FileAccessMemory *file = memnew(FileAccessMemory);
 			err = file->_open("data", FileAccess::WRITE);

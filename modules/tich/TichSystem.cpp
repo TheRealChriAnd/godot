@@ -31,6 +31,7 @@ TichSystem::TichSystem()
 	currentComplexity = Complexity::LEVEL_2;
 	lastButtonStateF1 = false;
 	lastButtonStateF2 = false;
+	screenshotCountDown = -1;
 }
 
 void TichSystem::Update(uint64_t frameTime)
@@ -61,8 +62,11 @@ void TichSystem::Update(uint64_t frameTime)
 		{
 			OS* os = OS::get_singleton();
 			uint64_t time = os->get_ticks_usec();
+
 			if (Save())
 			{
+				screenshotFileName = "_save.png";
+				screenshotCountDown = 1;
 				time = os->get_ticks_usec() - time;
 				os->print("Save Time %llu\n", time);
 				os->print("Memory %llu\n", Memory::get_mem_usage());
@@ -77,8 +81,16 @@ void TichSystem::Update(uint64_t frameTime)
 		{
 			OS *os = OS::get_singleton();
 			uint64_t time = os->get_ticks_usec();
+
+			Ref<Image> image = SceneTree::get_singleton()->get_root()->get_texture()->get_data();
+			image->flip_y();
+			Variant var = ProjectSettings::get_singleton()->get_setting("application/config/name");
+			image->save_png("screenshots/" + (String)var + "_preload.png");
+
 			if(Load())
 			{
+				screenshotFileName = "_load.png";
+				manualLoad = true;
 				time = os->get_ticks_usec() - time;
 				os->print("Load Time %llu\n", time);
 				os->print("Memory %llu\n", Memory::get_mem_usage());
@@ -149,6 +161,18 @@ void TichSystem::Update(uint64_t frameTime)
 		MakeSceneOwner();
 
 		currentTreeVersion = SceneTree::get_singleton()->get_tree_version();
+	}
+
+	if (screenshotCountDown >= 0)
+	{
+		if (screenshotCountDown == 0)
+		{
+			Ref<Image> image = SceneTree::get_singleton()->get_root()->get_texture()->get_data();
+			image->flip_y();
+			Variant var = ProjectSettings::get_singleton()->get_setting("application/config/name");
+			image->save_png("screenshots/" + (String)var + screenshotFileName);
+		}
+		screenshotCountDown--;
 	}
 
 	TichProfiler::get_singleton()->Update(frameTime);
@@ -237,6 +261,12 @@ void TichSystem::OnReadyPost()
 	TichInfo::s_IsLoading = false;
 
 	MakeSceneOwner();
+
+	if (manualLoad)
+	{
+		manualLoad = false;
+		screenshotCountDown = 0;
+	}
 }
 
 void TichSystem::MakeSceneOwner()

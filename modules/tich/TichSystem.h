@@ -48,7 +48,11 @@ private:
 	bool lastButtonStateF7;
 	uint64_t currentTreeVersion;
 
-	uint16_t currentComplexity; 
+	uint16_t currentComplexity;
+
+	bool manualLoad;
+	int8_t screenshotCountDown;
+	String screenshotFileName;
 
 private:
 	Vector<ParallaxBackground*> parallaxBackgrounds;
